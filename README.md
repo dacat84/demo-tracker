@@ -1,4 +1,4 @@
-# PCT Demo Tracker (GitHub Pages)
+# PCT Demo Tracker (GitHub Pages) Live Demo
 
 This is a demo template: **Map + Blog + Gear**, designed to be edited from an iPhone.
 
