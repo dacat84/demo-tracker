@@ -94,6 +94,15 @@ def main():
         last = latlng[-1]
         latest = {"lat": last[0], "lon": last[1], "ts": a.get("start_date", "")}
 
+    # Re-index all features so each activity gets a stable alternating color
+    try:
+        track["features"].sort(key=lambda f: f.get("properties", {}).get("start_date", ""))
+        for idx, f in enumerate(track["features"]):
+            f.setdefault("properties", {})
+            f["properties"]["i"] = idx
+    except Exception:
+        pass
+
     save_json(TRACK_PATH, track)
     if latest:
         save_json(LATEST_PATH, latest)
