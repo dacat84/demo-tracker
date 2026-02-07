@@ -11,14 +11,9 @@ body_extra: |
 
 <div class="hero">
   <div class="card pct-status-card">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-      <div class="card-title" style="margin:0;">Status</div>
-      <!-- optional: du kannst später hier einen Badge einsetzen, falls du willst -->
-    </div>
+    <div class="card-title" style="margin:0;">Status</div>
 
-    <div id="status" class="status">loading…</div>
-
-    <!-- NEW: status grid like the other cards -->
+    <!-- compact status grid (no "online") -->
     <div class="pct-status-grid">
       <div class="pct-row"><span>Last updated</span><b id="lastUpdated">—</b></div>
       <div class="pct-row"><span>Lat/Lon</span><b id="latlon">—</b></div>
