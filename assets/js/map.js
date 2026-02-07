@@ -1,4 +1,5 @@
 (async function () {
+  // Status elements (may not exist if you removed the Status card in index.md)
   const statusEl = document.getElementById("status");
   const metaEl = document.getElementById("meta");
   const statusExtraEl = document.getElementById("status-extra");
@@ -119,6 +120,9 @@
     const s = document.createElement("style");
     s.id = "pctUICSS";
     s.textContent = `
+      /* If you forgot to remove the Status card in HTML, this hides it completely */
+      .hero { display:none !important; }
+
       #statsList, #insightsList { list-style: none; padding-left: 0; margin: 0; }
       #statsList li, #insightsList li { margin: 0; }
 
@@ -172,9 +176,6 @@
         font-size: 12px;
         color: rgba(245,248,255,.62);
         margin-bottom: 6px;
-        display:flex;
-        align-items:center;
-        gap:8px;
       }
       .pct-chip .value{
         font-size: 16px;
@@ -294,20 +295,21 @@
         tileSize: 256,
         attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
       },
-      osm: {
+      topo: {
         type: "raster",
         tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          // Hiking/topo oriented
+          "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+          "https://b.tile.opentopomap.org/{z}/{x}/{y}.png",
+          "https://c.tile.opentopomap.org/{z}/{x}/{y}.png"
         ],
         tileSize: 256,
-        attribution: "© OpenStreetMap contributors"
+        attribution: "© OpenTopoMap (CC-BY-SA) © OpenStreetMap contributors"
       }
     },
     layers: [
       { id: "sat-layer", type: "raster", source: "sat", layout: { visibility: "visible" } },
-      { id: "osm-layer", type: "raster", source: "osm", layout: { visibility: "none" } }
+      { id: "topo-layer", type: "raster", source: "topo", layout: { visibility: "none" } }
     ]
   };
 
@@ -328,18 +330,19 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "pct-toggle-btn";
-      btn.title = "Toggle basemap (Satellite / OSM)";
+      btn.title = "Toggle basemap (Satellite / Topo)";
       btn.setAttribute("aria-label", "Toggle basemap");
 
+      // show the ACTIVE basemap icon (not the next)
       const setIcon = () => {
         const satVis = map.getLayoutProperty("sat-layer", "visibility") !== "none";
-        btn.textContent = satVis ? "🗺️" : "🛰️";
+        btn.textContent = satVis ? "🛰️" : "🗻";
       };
 
       btn.addEventListener("click", () => {
         const satVis = map.getLayoutProperty("sat-layer", "visibility") !== "none";
         map.setLayoutProperty("sat-layer", "visibility", satVis ? "none" : "visible");
-        map.setLayoutProperty("osm-layer", "visibility", satVis ? "visible" : "none");
+        map.setLayoutProperty("topo-layer", "visibility", satVis ? "visible" : "none");
         setIcon();
       });
 
@@ -424,13 +427,9 @@
     const time = Number.isFinite(tSec) ? fmtDuration(tSec) : "—";
 
     const elevM = pickElevationMeters(props);
-    const elevStr = elevM == null
-      ? "—"
-      : `${fmtInt(elevM)} m / ${fmtInt(toFt(elevM))} ft`;
+    const elevStr = elevM == null ? "—" : `${fmtInt(elevM)} m / ${fmtInt(toFt(elevM))} ft`;
 
-    const distStr = (km == null || mi == null)
-      ? "—"
-      : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
+    const distStr = (km == null || mi == null) ? "—" : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
 
     return `
       <div class="pct-popup">
@@ -470,9 +469,8 @@
         geometry: { type: "LineString", coordinates: coords.slice(0, n) }
       });
 
-      if (p < 1) {
-        liveAnim.raf = requestAnimationFrame(step);
-      } else {
+      if (p < 1) liveAnim.raf = requestAnimationFrame(step);
+      else {
         liveAnim.t0 = performance.now() + 600;
         liveAnim.raf = requestAnimationFrame(step);
       }
@@ -540,6 +538,7 @@
     };
   }
 
+  // IMPORTANT: statsListEl is a <ul> -> MUST render <li> items, not <div>
   function setStatsUI(s) {
     const elevMain = s.elevCount ? `${fmtInt(s.elevM)} m` : "—";
     const elevSub = s.elevCount ? `${fmtInt(toFt(s.elevM))} ft` : "";
@@ -551,44 +550,47 @@
     const avgSpeedSub = s.avgMph ? `${fmtNumber(s.avgMph, 1)} mi/h` : "";
 
     statsListEl.innerHTML = `
-      <div class="pct-stats-wrap">
-        <div class="pct-stat-hero">
-          <div class="label">Total Distance</div>
-          <div class="big">
-            <div class="primary">${fmtNumber(s.totalKm, 1)} km</div>
-            <div class="secondary">${fmtNumber(s.totalMi, 1)} mi</div>
+      <li>
+        <div class="pct-stats-wrap">
+          <div class="pct-stat-hero">
+            <div class="label">Total Distance</div>
+            <div class="big">
+              <div class="primary">${fmtNumber(s.totalKm, 1)} km</div>
+              <div class="secondary">${fmtNumber(s.totalMi, 1)} mi</div>
+            </div>
+          </div>
+
+          <div class="pct-chip-grid">
+            <div class="pct-chip">
+              <div class="label">Total Elevation</div>
+              <div class="value">${elevMain}</div>
+              <div class="sub">${elevSub}</div>
+            </div>
+
+            <div class="pct-chip">
+              <div class="label">Total Time</div>
+              <div class="value">${fmtDuration(s.timeS)}</div>
+              <div class="sub">${s.featsCount ? `${s.featsCount} activities` : ""}</div>
+            </div>
+
+            <div class="pct-chip">
+              <div class="label">Avg Distance / Activity</div>
+              <div class="value">${avgDistMain}</div>
+              <div class="sub">${avgDistSub}</div>
+            </div>
+
+            <div class="pct-chip">
+              <div class="label">Avg Speed</div>
+              <div class="value">${avgSpeedMain}</div>
+              <div class="sub">${avgSpeedSub}</div>
+            </div>
           </div>
         </div>
-
-        <div class="pct-chip-grid">
-          <div class="pct-chip">
-            <div class="label">Total Elevation</div>
-            <div class="value">${elevMain}</div>
-            <div class="sub">${elevSub}</div>
-          </div>
-
-          <div class="pct-chip">
-            <div class="label">Total Time</div>
-            <div class="value">${fmtDuration(s.timeS)}</div>
-            <div class="sub">${s.featsCount ? `${s.featsCount} activities` : ""}</div>
-          </div>
-
-          <div class="pct-chip">
-            <div class="label">Avg Distance / Activity</div>
-            <div class="value">${avgDistMain}</div>
-            <div class="sub">${avgDistSub}</div>
-          </div>
-
-          <div class="pct-chip">
-            <div class="label">Avg Speed</div>
-            <div class="value">${avgSpeedMain}</div>
-            <div class="sub">${avgSpeedSub}</div>
-          </div>
-        </div>
-      </div>
+      </li>
     `;
   }
 
+  // IMPORTANT: insightsListEl is a <ul> -> MUST render <li> items
   function setInsightsUI(s) {
     const pctLine =
       `${fmtNumber(s.totalKm, 1)} km / ${fmtNumber(s.totalMi, 1)} mi of ` +
@@ -603,27 +605,29 @@
     const pctWidth = Math.max(0, Math.min(100, Number.isFinite(s.pctCompleted) ? s.pctCompleted : 0));
 
     insightsListEl.innerHTML = `
-      <div class="pct-sections">
-        <div class="pct-section">
-          <div class="pct-section-title">Progress</div>
-          <div class="pct-rows">
-            <div class="pct-row"><span>PCT completed</span><b>${pctLine}</b></div>
-            <div class="pct-progressbar" aria-label="PCT progress">
-              <div class="pct-progressfill" style="width:${pctWidth}%;"></div>
+      <li>
+        <div class="pct-sections">
+          <div class="pct-section">
+            <div class="pct-section-title">Progress</div>
+            <div class="pct-rows">
+              <div class="pct-row"><span>PCT completed</span><b>${pctLine}</b></div>
+              <div class="pct-progressbar" aria-label="PCT progress">
+                <div class="pct-progressfill" style="width:${pctWidth}%;"></div>
+              </div>
+              <div class="pct-row" style="margin-top:6px;"><span>Remaining</span><b>${remainingLine}</b></div>
             </div>
-            <div class="pct-row" style="margin-top:6px;"><span>Remaining</span><b>${remainingLine}</b></div>
           </div>
-        </div>
 
-        <div class="pct-section">
-          <div class="pct-section-title">Timeline</div>
-          <div class="pct-rows">
-            <div class="pct-row"><span>First activity</span><b>${firstLine}</b></div>
-            <div class="pct-row"><span>Last activity</span><b>${lastLine}</b></div>
-            <div class="pct-row"><span>Days</span><b>${daysLine}</b></div>
+          <div class="pct-section">
+            <div class="pct-section-title">Timeline</div>
+            <div class="pct-rows">
+              <div class="pct-row"><span>First activity</span><b>${firstLine}</b></div>
+              <div class="pct-row"><span>Last activity</span><b>${lastLine}</b></div>
+              <div class="pct-row"><span>Days</span><b>${daysLine}</b></div>
+            </div>
           </div>
         </div>
-      </div>
+      </li>
     `;
   }
 
@@ -643,7 +647,8 @@
 
   async function refresh() {
     try {
-      statusEl.textContent = "updating…";
+      // If status elements exist, update them (won't crash if removed)
+      if (statusEl) statusEl.textContent = "updating…";
 
       const [track, latest] = await Promise.all([loadJson(trackUrl), loadJson(latestUrl)]);
 
@@ -750,32 +755,34 @@
       setStatsUI(s);
       setInsightsUI(s);
 
-      statusEl.textContent = "online";
-
-      // status extra line (latest activity summary)
+      // Update status box ONLY if it still exists (safe)
       const latestFeat = findLatestFeature(track);
-      let lastActLine = "";
-      if (latestFeat?.properties) {
-        const p = latestFeat.properties;
-        const type = activityTypeLabel(p);
+      if (statusEl) statusEl.textContent = ""; // keep empty if present
+      if (metaEl) {
+        // still render meta for anyone who keeps it, but you can remove it in HTML
+        let lastActLine = "";
+        if (latestFeat?.properties) {
+          const p = latestFeat.properties;
+          const type = activityTypeLabel(p);
 
-        const distM = Number(p.distance_m);
-        const km = Number.isFinite(distM) ? toKm(distM) : null;
-        const mi = Number.isFinite(distM) ? toMi(distM) : null;
+          const distM = Number(p.distance_m);
+          const km = Number.isFinite(distM) ? toKm(distM) : null;
+          const mi = Number.isFinite(distM) ? toMi(distM) : null;
 
-        const tSec = Number(p.moving_time_s);
-        const time = Number.isFinite(tSec) ? fmtDuration(tSec) : "—";
+          const tSec = Number(p.moving_time_s);
+          const time = Number.isFinite(tSec) ? fmtDuration(tSec) : "—";
 
-        const distStr = (km == null || mi == null) ? "—" : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
-        lastActLine = `<br>${type}: ${distStr} · ${time}`;
+          const distStr = (km == null || mi == null) ? "—" : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
+          lastActLine = `<br>${type}: ${distStr} · ${time}`;
+        }
+        metaEl.innerHTML =
+          `Last updated: ${fmtDate(latest.ts)} · Lat/Lon: ${latest.lat.toFixed(5)}, ${latest.lon.toFixed(5)}${lastActLine}`;
       }
-
-      metaEl.innerHTML =
-        `Last updated: ${fmtDate(latest.ts)} · Lat/Lon: ${latest.lat.toFixed(5)}, ${latest.lon.toFixed(5)}${lastActLine}`;
-
-      statusExtraEl.textContent = latestFeat
-        ? "Tap a track to see details. Hover highlights on desktop."
-        : "Waiting for activities…";
+      if (statusExtraEl) {
+        statusExtraEl.textContent = latestFeat
+          ? "Tap a track to see details. Hover highlights on desktop."
+          : "Waiting for activities…";
+      }
 
       if (!didFitOnce) {
         const bbox = geojsonBbox(track);
@@ -795,8 +802,8 @@
       }
 
     } catch (e) {
-      statusEl.textContent = "error";
-      metaEl.textContent = "Missing data/track.geojson or data/latest.json";
+      if (statusEl) statusEl.textContent = "error";
+      if (metaEl) metaEl.textContent = "Missing data/track.geojson or data/latest.json";
       if (statusExtraEl) statusExtraEl.textContent = "";
     }
   }
