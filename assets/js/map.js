@@ -1,13 +1,15 @@
 (async function () {
-  // Optional elements (index.md provides these)
-  const statusExtraEl = document.getElementById("status-extra");
+  // --- Status elements ---
   const lastUpdatedEl = document.getElementById("lastUpdated");
   const latlonEl = document.getElementById("latlon");
   const latestSummaryEl = document.getElementById("latestSummary");
+  const statusExtraEl = document.getElementById("status-extra");
 
-  const statsListEl = document.getElementById("statsList");
-  const insightsListEl = document.getElementById("insightsList");
+  // --- Statistics / Insights containers (DIVS) ---
+  const statsBoxEl = document.getElementById("statsBox");
+  const insightsBoxEl = document.getElementById("insightsBox");
 
+  // URLs (works in /demo-tracker/ on GitHub Pages)
   const trackUrl = new URL("./data/track.geojson", window.location.href).toString();
   const latestUrl = new URL("./data/latest.json", window.location.href).toString();
 
@@ -75,7 +77,7 @@
 
   async function loadJson(url) {
     const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
     return await res.json();
   }
 
@@ -109,9 +111,6 @@
     const s = document.createElement("style");
     s.id = "pctUICSS";
     s.textContent = `
-      #statsList, #insightsList { list-style: none; padding-left: 0; margin: 0; }
-      #statsList li, #insightsList li { margin: 0; }
-
       .pct-stats-wrap{ display: grid; gap: 10px; }
 
       .pct-stat-hero{
@@ -217,6 +216,17 @@
         background: linear-gradient(90deg, rgba(70,243,255,.95), rgba(255,75,216,.95));
       }
 
+      /* Status card compact + flat */
+      .pct-status-card .pct-status-grid{
+        margin-top: 10px;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 16px;
+        padding: 10px 12px;
+        display: grid;
+        gap: 6px;
+      }
+
       /* Popup */
       .maplibregl-popup-content{
         background: rgba(15,18,24,.88) !important;
@@ -263,17 +273,6 @@
         place-items: center;
         font-size: 18px;
       }
-
-      /* Status card: compact + flat like the others */
-      .pct-status-card .pct-status-grid{
-        margin-top: 10px;
-        background: rgba(255,255,255,.04);
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: 16px;
-        padding: 10px 12px;
-        display: grid;
-        gap: 6px;
-      }
     `;
     document.head.appendChild(s);
   }
@@ -316,7 +315,7 @@
 
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
-  // ---------- basemap toggle control (ICON FIX ✅) ----------
+  // ---------- basemap toggle (ICON ALWAYS UPDATES) ----------
   class BasemapToggle {
     onAdd(map) {
       this._map = map;
@@ -329,7 +328,6 @@
 
       const setIcon = () => {
         const satVis = map.getLayoutProperty("sat-layer", "visibility") !== "none";
-        // show CURRENT mode icon (stable / intuitive)
         btn.textContent = satVis ? "🛰️" : "🗻";
       };
 
@@ -337,12 +335,9 @@
         const satVis = map.getLayoutProperty("sat-layer", "visibility") !== "none";
         map.setLayoutProperty("sat-layer", "visibility", satVis ? "none" : "visible");
         map.setLayoutProperty("topo-layer", "visibility", satVis ? "visible" : "none");
-
-        // ✅ ICON FIX: update immediately (no waiting for idle)
         setIcon();
       });
 
-      // ✅ ICON FIX: also update on styledata (covers edge cases)
       map.on("styledata", setIcon);
 
       const wrap = document.createElement("div");
@@ -353,7 +348,7 @@
 
       this._container = wrap;
       setIcon();
-      return this._container;
+      return wrap;
     }
     onRemove() {
       this._container?.parentNode?.removeChild(this._container);
@@ -412,21 +407,8 @@
     return el;
   }
 
-  // ---------- layers / interactivity ----------
-  let didFitOnce = false;
+  // ---------- popup ----------
   let popup;
-  let hoveredId = null;
-
-  function setHover(id) {
-    hoveredId = id;
-    if (!map.getLayer("track-hover")) return;
-    if (id == null) {
-      map.setFilter("track-hover", ["==", ["get", "strava_id"], -1]);
-      return;
-    }
-    map.setFilter("track-hover", ["==", ["to-number", ["get", "strava_id"]], Number(id)]);
-  }
-
   function buildPopupHTML(props) {
     const type = activityTypeLabel(props);
     const start = props.start_date ? fmtDate(props.start_date) : "—";
@@ -439,13 +421,8 @@
     const time = Number.isFinite(tSec) ? fmtDuration(tSec) : "—";
 
     const elevM = pickElevationMeters(props);
-    const elevStr = elevM == null
-      ? "—"
-      : `${fmtInt(elevM)} m / ${fmtInt(toFt(elevM))} ft`;
-
-    const distStr = (km == null || mi == null)
-      ? "—"
-      : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
+    const elevStr = elevM == null ? "—" : `${fmtInt(elevM)} m / ${fmtInt(toFt(elevM))} ft`;
+    const distStr = (km == null || mi == null) ? "—" : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
 
     return `
       <div class="pct-popup">
@@ -546,7 +523,7 @@
 
     return {
       featsCount: feats.length,
-      distM, timeS, elevM, elevCount,
+      timeS, elevM, elevCount,
       totalKm, totalMi,
       firstTs, lastTs, activeDays, restDays,
       pctCompleted, remainingMi, remainingKm,
@@ -565,7 +542,7 @@
     const avgSpeedMain = s.avgKmh ? `${fmtNumber(s.avgKmh, 1)} km/h` : "—";
     const avgSpeedSub = s.avgMph ? `${fmtNumber(s.avgMph, 1)} mi/h` : "";
 
-    statsListEl.innerHTML = `
+    statsBoxEl.innerHTML = `
       <div class="pct-stats-wrap">
         <div class="pct-stat-hero">
           <div class="label">Total Distance</div>
@@ -617,7 +594,7 @@
 
     const pctWidth = Math.max(0, Math.min(100, Number.isFinite(s.pctCompleted) ? s.pctCompleted : 0));
 
-    insightsListEl.innerHTML = `
+    insightsBoxEl.innerHTML = `
       <div class="pct-sections">
         <div class="pct-section">
           <div class="pct-section-title">Progress</div>
@@ -656,11 +633,15 @@
     return best;
   }
 
-  // ---------- main refresh ----------
+  // ---------- main ----------
+  let didFitOnce = false;
+
   async function refresh() {
     try {
+      // Fetch data
       const [track, latest] = await Promise.all([loadJson(trackUrl), loadJson(latestUrl)]);
 
+      // Ensure layers once
       if (!map.getSource("track")) {
         injectUICSSOnce();
         map.addControl(new BasemapToggle(), "top-right");
@@ -694,14 +675,6 @@
           paint: { "line-color": "rgba(255,255,255,0.65)", "line-width": 1.6, "line-opacity": 0.55 }
         });
 
-        map.addLayer({
-          id: "track-hover",
-          type: "line",
-          source: "track",
-          paint: { "line-color": "rgba(255,255,255,0.92)", "line-width": 7, "line-opacity": 0.75, "line-blur": 0.6 },
-          filter: ["==", ["get", "strava_id"], -1]
-        });
-
         map.addSource("latest-progress", {
           type: "geojson",
           data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } }
@@ -721,36 +694,20 @@
           paint: { "line-color": "rgba(255,255,255,0.95)", "line-width": 3, "line-opacity": 0.85 }
         });
 
-        map.on("mousemove", "track-main", (e) => {
-          map.getCanvas().style.cursor = "pointer";
-          const f = e.features && e.features[0];
-          if (!f) return;
-          const id = (f.properties && f.properties.strava_id) ? f.properties.strava_id : null;
-          if (id !== hoveredId) setHover(id);
-        });
-        map.on("mouseleave", "track-main", () => {
-          map.getCanvas().style.cursor = "";
-          setHover(null);
-        });
-
         map.on("click", "track-main", (e) => {
           const f = e.features && e.features[0];
           if (!f) return;
-
-          const p = f.properties || {};
-          const html = buildPopupHTML(p);
-
           popup?.remove();
           popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: "320px" })
             .setLngLat(e.lngLat)
-            .setHTML(html)
+            .setHTML(buildPopupHTML(f.properties || {}))
             .addTo(map);
         });
       } else {
         map.getSource("track").setData(track);
       }
 
-      // marker
+      // Marker
       const lngLat = [latest.lon, latest.lat];
       if (!marker) {
         marker = new maplibregl.Marker({ element: createBlinkMarkerEl() })
@@ -760,12 +717,7 @@
         marker.setLngLat(lngLat);
       }
 
-      // Statistics + Insights
-      const s = computeStats(track);
-      if (statsListEl) setStatsUI(s);
-      if (insightsListEl) setInsightsUI(s);
-
-      // Status compact fields
+      // Status
       if (lastUpdatedEl) lastUpdatedEl.textContent = fmtDate(latest.ts);
       if (latlonEl) latlonEl.textContent = `${Number(latest.lat).toFixed(5)}, ${Number(latest.lon).toFixed(5)}`;
 
@@ -783,17 +735,21 @@
           const time = Number.isFinite(tSec) ? fmtDuration(tSec) : "—";
 
           const distStr = (km == null || mi == null) ? "—" : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
-
-          // clean linebreak feel comes from layout (grid), so just one line here
           latestSummaryEl.textContent = `${type}: ${distStr} · ${time}`;
         } else {
           latestSummaryEl.textContent = "—";
         }
       }
 
+      // Stats + Insights
+      const s = computeStats(track);
+      if (statsBoxEl) setStatsUI(s);
+      if (insightsBoxEl) setInsightsUI(s);
+
+      // Help text
       if (statusExtraEl) {
         statusExtraEl.textContent = latestFeat
-          ? "Tap a track to see details. Hover highlights on desktop."
+          ? "Tap a track to see details."
           : "Waiting for activities…";
       }
 
@@ -805,15 +761,18 @@
         didFitOnce = true;
       }
 
-      // Live progress only for latest
+      // Live progress on latest only
       if (latestFeat?.geometry?.type === "LineString") startLiveAnim(latestFeat.geometry.coordinates);
       else stopLiveAnim();
 
-    } catch (e) {
+    } catch (err) {
+      // Show actual error so we can diagnose
+      if (statusExtraEl) statusExtraEl.textContent = `Error: ${err?.message || err}`;
       if (lastUpdatedEl) lastUpdatedEl.textContent = "—";
       if (latlonEl) latlonEl.textContent = "—";
       if (latestSummaryEl) latestSummaryEl.textContent = "—";
-      if (statusExtraEl) statusExtraEl.textContent = "Missing data/track.geojson or data/latest.json";
+      if (statsBoxEl) statsBoxEl.innerHTML = "";
+      if (insightsBoxEl) insightsBoxEl.innerHTML = "";
     }
   }
 
