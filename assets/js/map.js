@@ -1,89 +1,108 @@
 (async function () {
+  // ====== DOM ======
   const statusEl = document.getElementById("status");
   const metaEl = document.getElementById("meta");
 
+  // The left box currently has a static "Features" list in index.md layout.
+  // We’ll replace its inner HTML at runtime with “Statistics” + totals.
+  const featuresBox =
+    Array.from(document.querySelectorAll(".card")).find((c) =>
+      (c.textContent || "").includes("Features")
+    ) || document.querySelector(".card"); // fallback
+
+  // ====== URLs (works under GitHub Pages subpaths) ======
   const trackUrl = new URL("./data/track.geojson", window.location.href).toString();
   const latestUrl = new URL("./data/latest.json", window.location.href).toString();
 
-  // ---------- Base maps (raster) ----------
-  const BASEMAPS = {
-    satellite: {
-      id: "satellite",
-      icon: "🛰️",
-      tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-      ],
-      attribution:
-        "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-    },
-    osm: {
-      id: "osm",
-      icon: "🗺️",
-      tiles: [
-        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      ],
-      attribution: "© OpenStreetMap contributors"
+  // ====== Units (US) ======
+  const M_TO_MI = 0.000621371;
+  const M_TO_FT = 3.28084;
+
+  function fmtMilesFromMeters(m) {
+    const mi = (Number(m) || 0) * M_TO_MI;
+    return `${mi.toFixed(mi < 10 ? 2 : 1)} mi`;
+  }
+  function fmtFeetFromMeters(m) {
+    const ft = (Number(m) || 0) * M_TO_FT;
+    return `${Math.round(ft).toLocaleString()} ft`;
+  }
+  function fmtDuration(sec) {
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    const days = Math.floor(sec / 86400);
+    sec %= 86400;
+    const h = Math.floor(sec / 3600);
+    sec %= 3600;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+
+    if (days > 0) {
+      return `${days} Day${days === 1 ? "" : "s"} ${h} h ${m} min`;
     }
-  };
+    if (h > 0) return `${h} h ${m} min`;
+    return `${m} min ${s} s`;
+  }
+  function fmtDate(ts) {
+    try {
+      return new Date(ts).toLocaleString(undefined, {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch {
+      return String(ts);
+    }
+  }
 
-  let currentBasemapKey = "satellite"; // ✅ Standard
+  // ====== Basemaps (Satellite default, OSM toggle) ======
+  // Satellite (Esri) – you already use it
+  const SAT_TILES =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const SAT_ATTR =
+    "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community";
 
-  const style = {
-    version: 8,
-    sources: {
-      basemap: {
-        type: "raster",
-        tiles: BASEMAPS[currentBasemapKey].tiles,
-        tileSize: 256,
-        attribution: BASEMAPS[currentBasemapKey].attribution
-      }
-    },
-    layers: [{ id: "basemap", type: "raster", source: "basemap" }]
-  };
+  // OSM Standard
+  const OSM_TILES = [
+    "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  ];
+  const OSM_ATTR = "© OpenStreetMap contributors";
+
+  function makeRasterStyle(tiles, attribution) {
+    return {
+      version: 8,
+      sources: {
+        base: {
+          type: "raster",
+          tiles: Array.isArray(tiles) ? tiles : [tiles],
+          tileSize: 256,
+          attribution,
+        },
+      },
+      layers: [{ id: "base", type: "raster", source: "base" }],
+    };
+  }
+
+  const styleSatellite = makeRasterStyle(SAT_TILES, SAT_ATTR);
+  const styleOSM = makeRasterStyle(OSM_TILES, OSM_ATTR);
 
   const map = new maplibregl.Map({
     container: "map",
-    style,
+    style: styleSatellite,
     center: [9.17, 48.78],
-    zoom: 11
+    zoom: 11,
   });
 
-  // ---------- Controls ----------
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
-  // ---------- Utils ----------
-  function fmtTs(ts) {
-    try { return new Date(ts).toLocaleString(); } catch { return String(ts); }
-  }
+  // ====== Data helpers ======
   async function loadJson(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     return await res.json();
-  }
-  function formatKm(m) {
-    if (typeof m !== "number") return "—";
-    return (m / 1000).toFixed(m >= 10000 ? 0 : 1) + " km";
-  }
-  function formatMeters(m) {
-    if (typeof m !== "number") return "—";
-    return Math.round(m) + " hm";
-  }
-  function formatDuration(sec) {
-    if (typeof sec !== "number") return "—";
-    sec = Math.max(0, Math.round(sec));
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    return `${m}:${String(s).padStart(2, "0")}`;
-  }
-  function getElevGain(p) {
-    const a = p && typeof p.elev_gain_m === "number" ? p.elev_gain_m : null;
-    const b = p && typeof p.total_elevation_gain_m === "number" ? p.total_elevation_gain_m : null;
-    const c = p && typeof p.total_elevation_gain === "number" ? p.total_elevation_gain : null;
-    return a ?? b ?? c ?? null;
   }
 
   function geojsonBbox(geojson) {
@@ -93,11 +112,15 @@
       for (const f of feats) {
         const g = f.type === "Feature" ? f.geometry : f;
         const coords =
-          g.type === "LineString" ? g.coordinates :
-          g.type === "MultiLineString" ? g.coordinates.flat() :
-          g.type === "Point" ? [g.coordinates] :
-          [];
-        for (const [x, y] of coords) {
+          g.type === "LineString"
+            ? g.coordinates
+            : g.type === "MultiLineString"
+              ? g.coordinates.flat()
+              : g.type === "Point"
+                ? [g.coordinates]
+                : [];
+        for (const c of coords) {
+          const [x, y] = c;
           if (x < minX) minX = x;
           if (y < minY) minY = y;
           if (x > maxX) maxX = x;
@@ -106,98 +129,61 @@
       }
       if (minX === Infinity) return null;
       return [minX, minY, maxX, maxY];
-    } catch { return null; }
-  }
-
-  // ---------- Mini stats in Features box ----------
-  function findFeaturesListEl() {
-    const byId = document.getElementById("features-list");
-    if (byId) return byId;
-    const uls = Array.from(document.querySelectorAll("ul"));
-    return uls.length ? uls[0] : null;
-  }
-
-  function sumStats(track) {
-    const feats = track?.features || [];
-    let dist = 0, time = 0, elev = 0, elevHas = false;
-    for (const f of feats) {
-      const p = f?.properties || {};
-      if (typeof p.distance_m === "number") dist += p.distance_m;
-      if (typeof p.moving_time_s === "number") time += p.moving_time_s;
-      const eg = getElevGain(p);
-      if (typeof eg === "number") { elev += eg; elevHas = true; }
+    } catch {
+      return null;
     }
-    return { dist, time, elev: elevHas ? elev : null };
   }
 
-  function upsertMiniStats(track) {
-    const ul = findFeaturesListEl();
-    if (!ul) return;
-    ul.querySelectorAll('li[data-role="mini-stats"]').forEach(li => li.remove());
-
-    const st = sumStats(track);
-
-    const li1 = document.createElement("li");
-    li1.dataset.role = "mini-stats";
-    li1.textContent = `Gesamt: ${formatKm(st.dist)}`;
-
-    const li2 = document.createElement("li");
-    li2.dataset.role = "mini-stats";
-    li2.textContent = `Zeit: ${formatDuration(st.time)}`;
-
-    const li3 = document.createElement("li");
-    li3.dataset.role = "mini-stats";
-    li3.textContent = `Höhenmeter: ${st.elev == null ? "—" : formatMeters(st.elev)}`;
-
-    ul.insertBefore(li3, ul.firstChild);
-    ul.insertBefore(li2, ul.firstChild);
-    ul.insertBefore(li1, ul.firstChild);
+  function lastCoordOfFeature(f) {
+    try {
+      const coords = f?.geometry?.coordinates;
+      if (!coords || !coords.length) return null;
+      return coords[coords.length - 1]; // [lon,lat]
+    } catch {
+      return null;
+    }
   }
 
-  // ---------- Popup styling ----------
-  function ensurePopupStyleOnce() {
-    if (document.getElementById("pctPopupStyle")) return;
-    const s = document.createElement("style");
-    s.id = "pctPopupStyle";
-    s.textContent = `
-      .pct-popup .maplibregl-popup-content{
-        background: rgba(16,18,22,.92);
-        color: rgba(245,247,250,.96);
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: 14px;
-        box-shadow: 0 16px 40px rgba(0,0,0,.45);
-        padding: 10px 12px;
-        font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-        min-width: 220px;
+  function pickLatestFeature(track) {
+    const feats = (track && track.features) || [];
+    if (!feats.length) return null;
+
+    // Prefer newest start_date; fallback: highest strava_id
+    return feats
+      .slice()
+      .sort((a, b) => {
+        const da = a?.properties?.start_date || "";
+        const db = b?.properties?.start_date || "";
+        if (da < db) return -1;
+        if (da > db) return 1;
+        return (a?.properties?.strava_id || 0) - (b?.properties?.strava_id || 0);
+      })
+      .at(-1);
+  }
+
+  function computeTotals(track) {
+    const feats = (track && track.features) || [];
+    let distM = 0;
+    let timeS = 0;
+    let elevM = 0;
+    let elevKnown = false;
+
+    for (const f of feats) {
+      distM += Number(f?.properties?.distance_m || 0);
+      timeS += Number(f?.properties?.moving_time_s || 0);
+
+      // Optional: if you added "elev_gain_m" in the sync script, we’ll show it
+      const eg = f?.properties?.elev_gain_m;
+      if (eg !== undefined && eg !== null && eg !== "") {
+        elevM += Number(eg) || 0;
+        elevKnown = true;
       }
-      .pct-popup .maplibregl-popup-tip{ border-top-color: rgba(16,18,22,.92) !important; }
-      .pct-popup .pct-title{ font-weight:700; margin-bottom:4px; }
-      .pct-popup .pct-row{ display:flex; justify-content:space-between; gap:12px; }
-      .pct-popup .pct-k{ opacity:.75; }
-      .pct-popup .pct-v{ font-weight:600; }
-    `;
-    document.head.appendChild(s);
+    }
+
+    return { distM, timeS, elevM, elevKnown };
   }
 
-  function buildPopupHtml(p) {
-    const name = p.name || "Aktivität";
-    const typ = p.type || "";
-    const date = p.start_date ? fmtTs(p.start_date) : "—";
-    const dist = typeof p.distance_m === "number" ? formatKm(p.distance_m) : "—";
-    const time = typeof p.moving_time_s === "number" ? formatDuration(p.moving_time_s) : "—";
-    const eg = getElevGain(p);
-    const elev = typeof eg === "number" ? formatMeters(eg) : "—";
-
-    return `
-      <div class="pct-title">${name}${typ ? ` · ${typ}` : ""}</div>
-      <div class="pct-row"><div class="pct-k">Datum</div><div class="pct-v">${date}</div></div>
-      <div class="pct-row"><div class="pct-k">Distanz</div><div class="pct-v">${dist}</div></div>
-      <div class="pct-row"><div class="pct-k">Zeit</div><div class="pct-v">${time}</div></div>
-      <div class="pct-row"><div class="pct-k">Höhenmeter</div><div class="pct-v">${elev}</div></div>
-    `;
-  }
-
-  // ---------- Blinking marker ----------
+  // ====== Marker (pulsing green ↔ orange) ======
   let marker;
   function createPulsingMarkerEl() {
     const el = document.createElement("div");
@@ -206,7 +192,7 @@
     el.style.borderRadius = "999px";
     el.style.border = "2px solid rgba(232,238,245,.95)";
     el.style.boxShadow = "0 10px 26px rgba(0,0,0,.45)";
-    el.style.background = "#2bff88";
+    el.style.background = "#2bff88"; // start green
     el.style.position = "relative";
 
     const ring = document.createElement("div");
@@ -246,210 +232,433 @@
     return el;
   }
 
-  // ---------- Basemap switching without losing tracks ----------
-  function switchBasemap(key) {
-    const src = map.getSource("basemap");
-    if (!src) return;
+  // ====== Popup styling (dark card) ======
+  function ensurePopupCSS() {
+    if (document.getElementById("pctPopupCSS")) return;
+    const s = document.createElement("style");
+    s.id = "pctPopupCSS";
+    s.textContent = `
+      .pct-popup .maplibregl-popup-content{
+        background: rgba(18,22,28,.92);
+        color: rgba(232,238,245,.95);
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 14px;
+        box-shadow: 0 18px 50px rgba(0,0,0,.55);
+        padding: 12px 12px 10px 12px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        min-width: 220px;
+      }
+      .pct-popup .maplibregl-popup-tip{
+        border-top-color: rgba(18,22,28,.92) !important;
+      }
+      .pct-popup .maplibregl-popup-close-button{
+        color: rgba(120,180,255,.95);
+        font-size: 18px;
+        padding: 6px 10px;
+      }
+      .pct-popup h3{
+        margin: 0 0 6px 0;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: .2px;
+      }
+      .pct-popup .row{
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+        line-height: 1.35;
+        margin: 3px 0;
+      }
+      .pct-popup .k{ opacity: .75; }
+      .pct-popup .v{ font-weight: 700; }
+    `;
+    document.head.appendChild(s);
+  }
 
-    // Best case: update tiles in place
-    if (typeof src.setTiles === "function") {
-      src.setTiles(BASEMAPS[key].tiles);
-      return;
+  // ====== Track layers (re-added after style switch) ======
+  const TRACK_SOURCE_ID = "track";
+  const LAYER_GLOW = "track-glow";
+  const LAYER_MAIN = "track-main";
+  const LAYER_HILITE = "track-highlight";
+  const LAYER_HOVER = "track-hover";
+
+  const colorExpr = [
+    "case",
+    ["==", ["%", ["to-number", ["get", "i"]], 2], 0],
+    "#46f3ff", // cyan
+    "#ff4bd8", // magenta
+  ];
+
+  let lastTrackData = null;
+  let lastLatest = null;
+
+  function addOrUpdateTrack(track) {
+    // Source
+    if (!map.getSource(TRACK_SOURCE_ID)) {
+      map.addSource(TRACK_SOURCE_ID, { type: "geojson", data: track });
+    } else {
+      map.getSource(TRACK_SOURCE_ID).setData(track);
     }
 
-    // Fallback: re-create basemap source/layer only
-    try {
-      if (map.getLayer("basemap")) map.removeLayer("basemap");
-      if (map.getSource("basemap")) map.removeSource("basemap");
-      map.addSource("basemap", {
-        type: "raster",
-        tiles: BASEMAPS[key].tiles,
-        tileSize: 256,
-        attribution: BASEMAPS[key].attribution
+    // Layers (ensure correct order)
+    if (!map.getLayer(LAYER_GLOW)) {
+      map.addLayer({
+        id: LAYER_GLOW,
+        type: "line",
+        source: TRACK_SOURCE_ID,
+        paint: {
+          "line-color": colorExpr,
+          "line-width": 12,
+          "line-opacity": 0.28,
+          "line-blur": 6,
+        },
       });
+    }
+    if (!map.getLayer(LAYER_MAIN)) {
+      map.addLayer({
+        id: LAYER_MAIN,
+        type: "line",
+        source: TRACK_SOURCE_ID,
+        paint: {
+          "line-color": colorExpr,
+          "line-width": 5,
+          "line-opacity": 0.92,
+        },
+      });
+    }
+    if (!map.getLayer(LAYER_HILITE)) {
+      map.addLayer({
+        id: LAYER_HILITE,
+        type: "line",
+        source: TRACK_SOURCE_ID,
+        paint: {
+          "line-color": "rgba(255,255,255,0.65)",
+          "line-width": 1.6,
+          "line-opacity": 0.55,
+        },
+      });
+    }
 
-      // Insert below tracks (if present) so tracks stay on top
-      const beforeId = map.getLayer("track-glow") ? "track-glow" : undefined;
-      map.addLayer({ id: "basemap", type: "raster", source: "basemap" }, beforeId);
-    } catch (e) {
-      console.warn("Basemap switch fallback failed:", e);
+    // Hover highlight (brighter/stronger on hover)
+    if (!map.getLayer(LAYER_HOVER)) {
+      map.addLayer({
+        id: LAYER_HOVER,
+        type: "line",
+        source: TRACK_SOURCE_ID,
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 7,
+          "line-opacity": 0.0,
+          "line-blur": 0,
+        },
+      });
     }
   }
 
-  // ---------- Toggle as MapLibre Control (under zoom) ----------
-  class BasemapToggleControl {
-    onAdd(mapInstance) {
-      this._map = mapInstance;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.id = "pctBasemapToggle";
-      btn.title = "Basemap wechseln";
-      btn.textContent = BASEMAPS[currentBasemapKey].icon;
-
-      btn.style.width = "40px";
-      btn.style.height = "40px";
-      btn.style.borderRadius = "10px";
-      btn.style.border = "1px solid rgba(0,0,0,.18)";
-      btn.style.background = "rgba(255,255,255,.92)";
-      btn.style.backdropFilter = "blur(8px)";
-      btn.style.color = "#111";
-      btn.style.fontSize = "18px";
-      btn.style.display = "grid";
-      btn.style.placeItems = "center";
-      btn.style.cursor = "pointer";
-      btn.style.boxShadow = "0 10px 22px rgba(0,0,0,.18)";
-
-      // Make it look like other controls (stackable)
-      const container = document.createElement("div");
-      container.className = "maplibregl-ctrl maplibregl-ctrl-group";
-      container.style.marginTop = "8px"; // ✅ unter Zoom
-
-      container.appendChild(btn);
-
-      btn.addEventListener("click", () => {
-        currentBasemapKey = (currentBasemapKey === "satellite") ? "osm" : "satellite";
-        btn.textContent = BASEMAPS[currentBasemapKey].icon;
-        switchBasemap(currentBasemapKey);
-      });
-
-      this._container = container;
-      return container;
-    }
-    onRemove() {
-      this._container?.parentNode?.removeChild(this._container);
-      this._map = undefined;
-    }
-  }
-
-  // ---------- Track layers + hover + popup ----------
+  // ====== Hover + Click popup ======
   let hoveredId = null;
-  let popup = null;
 
-  function removePopup() {
-    if (popup) { popup.remove(); popup = null; }
+  function enableHoverAndClick() {
+    ensurePopupCSS();
+
+    // MapLibre: promoteId helps feature-state if you have a stable id; if not, we use index.
+    // We’ll just use feature-state on hover layer opacity.
+    map.on("mousemove", LAYER_MAIN, (e) => {
+      map.getCanvas().style.cursor = "pointer";
+      if (!e.features || !e.features.length) return;
+
+      const f = e.features[0];
+      const fid =
+        f.id ??
+        f.properties?.strava_id ??
+        f.properties?.i ??
+        null;
+
+      if (hoveredId !== null && hoveredId !== fid) {
+        // reset old
+        // We simulate hover by filtering hover-layer to this feature
+        map.setFilter(LAYER_HOVER, ["==", ["get", "strava_id"], -1]);
+      }
+
+      hoveredId = fid;
+      // Filter hover layer to this feature by strava_id if present; else by i
+      if (f.properties?.strava_id != null) {
+        map.setFilter(LAYER_HOVER, ["==", ["get", "strava_id"], Number(f.properties.strava_id)]);
+      } else if (f.properties?.i != null) {
+        map.setFilter(LAYER_HOVER, ["==", ["get", "i"], Number(f.properties.i)]);
+      } else {
+        map.setFilter(LAYER_HOVER, ["==", ["get", "name"], f.properties?.name || ""]);
+      }
+      map.setPaintProperty(LAYER_HOVER, "line-opacity", 0.35);
+    });
+
+    map.on("mouseleave", LAYER_MAIN, () => {
+      map.getCanvas().style.cursor = "";
+      hoveredId = null;
+      if (map.getLayer(LAYER_HOVER)) {
+        map.setPaintProperty(LAYER_HOVER, "line-opacity", 0.0);
+        map.setFilter(LAYER_HOVER, ["==", ["get", "strava_id"], -1]);
+      }
+    });
+
+    let popup = null;
+
+    map.on("click", LAYER_MAIN, (e) => {
+      if (!e.features || !e.features.length) return;
+      const f = e.features[0];
+
+      const start = f.properties?.start_date || "";
+      const distM = Number(f.properties?.distance_m || 0);
+      const timeS = Number(f.properties?.moving_time_s || 0);
+      const elevM = f.properties?.elev_gain_m;
+
+      const when = start ? fmtDate(start) : "—";
+      const dist = fmtMilesFromMeters(distM);
+      const dur = fmtDuration(timeS);
+
+      // Activity type in English (fallback)
+      const typeRaw = (f.properties?.type || "").toString();
+      const actType = typeRaw ? typeRaw : "Activity";
+
+      const elev = (elevM !== undefined && elevM !== null && elevM !== "")
+        ? fmtFeetFromMeters(Number(elevM) || 0)
+        : "—";
+
+      // Remove “Nachtwanderung …” title: use just activity type as header
+      const html = `
+        <div class="pct-popup">
+          <h3>${escapeHtml(actType)}</h3>
+          <div class="row"><div class="k">Date</div><div class="v">${escapeHtml(when)}</div></div>
+          <div class="row"><div class="k">Distance</div><div class="v">${escapeHtml(dist)}</div></div>
+          <div class="row"><div class="k">Time</div><div class="v">${escapeHtml(dur)}</div></div>
+          <div class="row"><div class="k">Elevation</div><div class="v">${escapeHtml(elev)}</div></div>
+        </div>
+      `;
+
+      const ll = e.lngLat;
+
+      if (popup) popup.remove();
+      popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 14, className: "pct-popup" })
+        .setLngLat(ll)
+        .setHTML(html)
+        .addTo(map);
+    });
   }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // ====== Base map toggle button (placed UNDER zoom control) ======
+  let isSatellite = true;
+
+  function addBasemapToggleControl() {
+    // custom control to place exactly under the navigation control (top-right)
+    class BasemapControl {
+      onAdd(mapInstance) {
+        this._map = mapInstance;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.title = "Toggle basemap";
+        btn.setAttribute("aria-label", "Toggle basemap");
+        btn.style.width = "36px";
+        btn.style.height = "36px";
+        btn.style.borderRadius = "10px";
+        btn.style.border = "1px solid rgba(255,255,255,.20)";
+        btn.style.background = "rgba(18,22,28,.75)";
+        btn.style.backdropFilter = "blur(8px)";
+        btn.style.webkitBackdropFilter = "blur(8px)";
+        btn.style.boxShadow = "0 10px 26px rgba(0,0,0,.45)";
+        btn.style.display = "grid";
+        btn.style.placeItems = "center";
+        btn.style.cursor = "pointer";
+        btn.style.marginTop = "8px";
+
+        // icon: satellite (🛰️) vs map (🗺️) — emoji is simplest and looks good on iOS
+        const icon = document.createElement("div");
+        icon.style.fontSize = "18px";
+        icon.textContent = "🗺️"; // since satellite is default, button shows “switch to map”
+        btn.appendChild(icon);
+
+        btn.addEventListener("click", async () => {
+          // Keep current view
+          const center = this._map.getCenter();
+          const zoom = this._map.getZoom();
+          const bearing = this._map.getBearing();
+          const pitch = this._map.getPitch();
+
+          isSatellite = !isSatellite;
+          icon.textContent = isSatellite ? "🗺️" : "🛰️";
+
+          // Switch style
+          this._map.setStyle(isSatellite ? styleSatellite : styleOSM);
+
+          // After style load, re-add track + marker from cached data
+          this._map.once("style.load", () => {
+            if (lastTrackData) addOrUpdateTrack(lastTrackData);
+            if (lastLatest) placeMarkerFromLatest(lastLatest, lastTrackData);
+
+            // restore view
+            this._map.jumpTo({ center, zoom, bearing, pitch });
+
+            // re-enable interactions (layers are new)
+            enableHoverAndClick();
+          });
+        });
+
+        this._container = document.createElement("div");
+        this._container.className = "maplibregl-ctrl maplibregl-ctrl-group";
+        // make it look like a single button group
+        this._container.style.background = "transparent";
+        this._container.style.boxShadow = "none";
+        this._container.style.border = "none";
+        this._container.appendChild(btn);
+        return this._container;
+      }
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    // Add AFTER nav control so it appears beneath it
+    map.addControl(new BasemapControl(), "top-right");
+  }
+
+  // ====== Marker placement ======
+  function placeMarkerFromLatest(latest, track) {
+    // If latest.json exists, use it; else use latest feature last coord.
+    let lngLat = null;
+    if (latest && latest.lon != null && latest.lat != null) {
+      lngLat = [Number(latest.lon), Number(latest.lat)];
+    } else {
+      const lf = pickLatestFeature(track);
+      const c = lf ? lastCoordOfFeature(lf) : null;
+      if (c) lngLat = [c[0], c[1]];
+    }
+    if (!lngLat) return;
+
+    if (!marker) {
+      marker = new maplibregl.Marker({ element: createPulsingMarkerEl() }).setLngLat(lngLat).addTo(map);
+    } else {
+      marker.setLngLat(lngLat);
+    }
+  }
+
+  // ====== Status + Statistics UI ======
+  function setStatisticsUI(track, latestFeature) {
+    if (!featuresBox) return;
+
+    const totals = computeTotals(track);
+    const totalDist = fmtMilesFromMeters(totals.distM);
+    const totalTime = fmtDuration(totals.timeS);
+    const totalElev = totals.elevKnown ? fmtFeetFromMeters(totals.elevM) : "—";
+
+    // Replace title and list in the box
+    // Keep the same "card" styling; just update contents.
+    const html = `
+      <h3 style="margin:0 0 10px 0;">Statistics</h3>
+      <ul style="margin:0; padding-left: 18px; line-height:1.55;">
+        <li>Total: ${escapeHtml(totalDist)}</li>
+        <li>Time: ${escapeHtml(totalTime)}</li>
+        <li>Elevation: ${escapeHtml(totalElev)}</li>
+      </ul>
+    `;
+    featuresBox.innerHTML = html;
+
+    // Status tip line: show latest activity summary (instead of “Tipp: …”)
+    if (latestFeature) {
+      const dist = fmtMilesFromMeters(Number(latestFeature.properties?.distance_m || 0));
+      const dur = fmtDuration(Number(latestFeature.properties?.moving_time_s || 0));
+      const type = (latestFeature.properties?.type || "Activity").toString();
+      // Keep "Last updated" line in metaEl as you have; show activity summary beneath
+      // We’ll put it in statusEl's parent as meta second line
+      // Here: write into metaEl additional text line
+      const summary = `${escapeHtml(type)}: ${escapeHtml(dist)} · ${escapeHtml(dur)}`;
+      // metaEl already shows Last updated…; we add newline-like separator
+      metaEl.textContent = metaEl.textContent.split(" · Lat/Lon:")[0] + ` · ${summary}`;
+    }
+  }
+
+  // ====== Refresh loop ======
+  let firstFitDone = false;
 
   async function refresh() {
     try {
-      statusEl.textContent = "aktualisiere…";
-      const [track, latest] = await Promise.all([loadJson(trackUrl), loadJson(latestUrl)]);
+      statusEl.textContent = "updating…";
 
-      upsertMiniStats(track);
+      const [track, latest] = await Promise.all([loadJson(trackUrl), loadJson(latestUrl).catch(() => null)]);
 
-      if (!map.getSource("track")) {
-        map.addSource("track", { type: "geojson", data: track, generateId: true });
+      lastTrackData = track;
+      lastLatest = latest;
 
-        const colorExpr = [
-          "case",
-          ["==", ["%", ["to-number", ["get", "i"]], 2], 0], "#46f3ff",
-          "#ff4bd8"
-        ];
+      // Ensure track layers exist (also after any future style changes)
+      addOrUpdateTrack(track);
 
-        const wGlow = ["case", ["boolean", ["feature-state", "hover"], false], 18, 12];
-        const oGlow = ["case", ["boolean", ["feature-state", "hover"], false], 0.45, 0.30];
-        const wMain = ["case", ["boolean", ["feature-state", "hover"], false], 7, 5];
-        const oMain = ["case", ["boolean", ["feature-state", "hover"], false], 1.0, 0.92];
+      // Hover/click handlers need layers present
+      enableHoverAndClick();
 
-        map.addLayer({
-          id: "track-glow",
-          type: "line",
-          source: "track",
-          paint: {
-            "line-color": colorExpr,
-            "line-width": wGlow,
-            "line-opacity": oGlow,
-            "line-blur": 6
-          }
-        });
+      // Latest feature
+      const latestFeature = pickLatestFeature(track);
 
-        map.addLayer({
-          id: "track-main",
-          type: "line",
-          source: "track",
-          paint: {
-            "line-color": colorExpr,
-            "line-width": wMain,
-            "line-opacity": oMain
-          }
-        });
+      // Marker
+      placeMarkerFromLatest(latest, track);
 
-        map.addLayer({
-          id: "track-highlight",
-          type: "line",
-          source: "track",
-          paint: {
-            "line-color": ["case", ["boolean", ["feature-state", "hover"], false], "rgba(255,255,255,0.95)", "rgba(255,255,255,0.65)"],
-            "line-width": ["case", ["boolean", ["feature-state", "hover"], false], 2.2, 1.6],
-            "line-opacity": 0.65
-          }
-        });
-
-        map.on("mousemove", "track-main", (e) => {
-          if (!e.features?.length) return;
-          const f = e.features[0];
-          const id = f.id;
-          map.getCanvas().style.cursor = "pointer";
-
-          if (hoveredId !== null && hoveredId !== id) {
-            map.setFeatureState({ source: "track", id: hoveredId }, { hover: false });
-          }
-          hoveredId = id;
-          map.setFeatureState({ source: "track", id }, { hover: true });
-        });
-
-        map.on("mouseleave", "track-main", () => {
-          map.getCanvas().style.cursor = "";
-          if (hoveredId !== null) map.setFeatureState({ source: "track", id: hoveredId }, { hover: false });
-          hoveredId = null;
-        });
-
-        ensurePopupStyleOnce();
-        map.on("click", "track-main", (e) => {
-          if (!e.features?.length) return;
-          const p = e.features[0].properties || {};
-          removePopup();
-          popup = new maplibregl.Popup({
-            closeButton: true,
-            closeOnClick: true,
-            maxWidth: "320px",
-            className: "pct-popup"
-          })
-            .setLngLat(e.lngLat)
-            .setHTML(buildPopupHtml(p))
-            .addTo(map);
-        });
-
-        // ✅ Toggle unter Zoom
-        map.addControl(new BasemapToggleControl(), "top-right");
-      } else {
-        map.getSource("track").setData(track);
+      // Status line
+      const ts = latest?.ts || latestFeature?.properties?.start_date || "";
+      const lng = latest?.lon;
+      const lat = latest?.lat;
+      if (ts) {
+        if (lat != null && lng != null) {
+          metaEl.textContent = `Last updated: ${fmtDate(ts)} · Lat/Lon: ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+        } else {
+          metaEl.textContent = `Last updated: ${fmtDate(ts)}`;
+        }
       }
 
-      const lngLat = [latest.lon, latest.lat];
-      if (!marker) {
-        marker = new maplibregl.Marker({ element: createPulsingMarkerEl() }).setLngLat(lngLat).addTo(map);
-      } else {
-        marker.setLngLat(lngLat);
-      }
+      // Statistics box + replace “tip” text
+      setStatisticsUI(track, latestFeature);
 
-      metaEl.textContent = `Last updated: ${fmtTs(latest.ts)} · Lat/Lon: ${latest.lat.toFixed(5)}, ${latest.lon.toFixed(5)}`;
-
-      const bbox = geojsonBbox(track);
-      if (bbox) {
-        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 800 });
-      } else {
-        map.easeTo({ center: lngLat, zoom: 13, duration: 800 });
+      // Fit bounds once (don’t keep jumping on mobile)
+      if (!firstFitDone) {
+        const bbox = geojsonBbox(track);
+        if (bbox) {
+          map.fitBounds(
+            [
+              [bbox[0], bbox[1]],
+              [bbox[2], bbox[3]],
+            ],
+            { padding: 40, duration: 800 }
+          );
+        }
+        firstFitDone = true;
       }
 
       statusEl.textContent = "online";
     } catch (e) {
-      statusEl.textContent = "Fehler (Daten fehlen?)";
-      metaEl.textContent = "Lege data/track.geojson und data/latest.json an.";
-      console.error(e);
+      statusEl.textContent = "error";
+      metaEl.textContent = "Missing data/track.geojson or data/latest.json";
     }
   }
 
+  // ====== Init ======
   map.on("load", () => {
+    // satellite is default style already
+    addBasemapToggleControl();
+
+    // make hover layer inactive initially
+    if (map.getLayer(LAYER_HOVER)) {
+      map.setPaintProperty(LAYER_HOVER, "line-opacity", 0.0);
+      map.setFilter(LAYER_HOVER, ["==", ["get", "strava_id"], -1]);
+    }
+
     refresh();
     setInterval(refresh, 60_000);
   });
