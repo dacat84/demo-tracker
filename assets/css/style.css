@@ -1,4 +1,4 @@
-:root{
+#:root{
   --bg:#0b0e11;
   --card:#11161c;
   --text:#e8eef5;
@@ -171,4 +171,40 @@ code{
   padding: 2px 6px;
   border-radius: 8px;
   border: 1px solid rgba(232,238,245,.08);
+}
+
+
+/* ===== Trail Updates (Markdown only, mobile friendly) ===== */
+
+main h2{
+  margin-top: 18px;
+}
+
+main h2 + p{
+  margin-top: 10px;
+}
+
+main h2{
+  background: rgba(17,22,28,.72);
+  border: 1px solid rgba(232,238,245,.12);
+  border-radius: 16px 16px 0 0;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+
+main h2 + p{
+  background: rgba(17,22,28,.72);
+  border-left: 1px solid rgba(232,238,245,.12);
+  border-right: 1px solid rgba(232,238,245,.12);
+  border-bottom: 1px solid rgba(232,238,245,.12);
+  border-radius: 0 0 16px 16px;
+  padding: 14px;
+  color: rgba(232,238,245,.85);
+  line-height: 1.5;
+}
+
+main h2:not(:first-of-type){
+  margin-top: 14px;
 }
