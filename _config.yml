@@ -1,7 +1,7 @@
 title: "PCT Demo Tracker"
 description: "Map, progress, photos & short updates from the trail"
 url: ""  # GitHub Pages sets this
-baseurl: "/demo-tracker"  # set to "/REPO_NAME" if needed
+baseurl: "/dom-pct"  # set to "/REPO_NAME" if needed
 markdown: kramdown
 theme: null
 permalink: pretty

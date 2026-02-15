@@ -15,8 +15,8 @@ permalink: /gear/
   <div class="lp-shell">
     <div class="lp-frame">
       <!-- Lighterpack embed -->
-      <script src="https://lighterpack.com/e/lm2int"></script>
-      <div id="lm2int"></div>
+      <script src="https://lighterpack.com/e/y1me1j"></script>
+      <div id="y1me1j"></div>
     </div>
   </div>
 </div>
@@ -27,7 +27,7 @@ permalink: /gear/
   (function () {
     let tries = 0;
     const timer = setInterval(() => {
-      const iframe = document.querySelector('#lm2int iframe');
+      const iframe = document.querySelector('#y1me1j iframe');
       tries++;
 
       if (iframe) {

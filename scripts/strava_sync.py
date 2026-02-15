@@ -1,8 +1,8 @@
 import os, json, math, urllib.request, urllib.parse
 
-CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
-CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
-REFRESH_TOKEN = os.environ["STRAVA_REFRESH_TOKEN"]
+CLIENT_ID = os.environ["202394"]
+CLIENT_SECRET = os.environ["bb21c475532c626b283b9d35c99362d2460df925"]
+REFRESH_TOKEN = os.environ["91c1c8afe36a61dcddfc48688481b8a4ccfe184f"]
 
 TRACK_PATH = "data/track.geojson"
 LATEST_PATH = "data/latest.json"
