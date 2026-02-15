@@ -15,7 +15,7 @@ permalink: /gear/
   <div class="lp-shell">
     <div class="lp-frame">
       <!-- Lighterpack embed -->
-      <script src="https://lighterpack.com/e/lm2int"></script>
+      <script src="https://lighterpack.com/e/y1me1j"></script>
       <div id="lm2int"></div>
     </div>
   </div>
