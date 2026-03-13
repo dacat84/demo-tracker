@@ -474,9 +474,9 @@
     const time = Number.isFinite(tSec) ? fmtDuration(tSec) : "—";
 
     const elevM = pickElevationMeters(props);
-    const elevStr = elevM == null ? "—" : `${fmtInt(elevM)} m / ${fmtInt(toFt(elevM))} ft`;
+    cconst elevStr = elevM == null ? "—" : `${fmtInt(toFt(elevM))} ft`;
 
-    const distStr = (km == null || mi == null) ? "—" : `${fmtNumber(km, 1)} km / ${fmtNumber(mi, 1)} mi`;
+    const distStr = mi == null ? "—" : `${fmtNumber(mi, 1)} mi`;
 
     return `
       <div class="pct-popup">
