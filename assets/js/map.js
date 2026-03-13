@@ -750,35 +750,6 @@
   `;
 }
 
-    insightsListEl.innerHTML = `
-      <div class="pct-sections">
-        <div class="pct-section">
-          <div class="pct-section-title">Progress</div>
-          <div class="pct-rows">
-            <div class="pct-row"><span>PCT completed</span><b>${pctLine}</b></div>
-            <div class="pct-progressbar" aria-label="PCT progress">
-              <div class="pct-progressfill" style="width:${pctWidth}%;"></div>
-            </div>
-            <div class="pct-row" style="margin-top:6px;"><span>Remaining</span><b>${remainingLine}</b></div>
-          </div>
-
-          <div class="pct-section" style="margin-top:10px;">
-            <div class="pct-section-title">Timeline</div>
-            <div class="pct-rows">
-              <div class="pct-row"><span>First activity</span><b>${firstLine}</b></div>
-              <div class="pct-row"><span>Last activity</span><b>${lastLine}</b></div>
-              <div class="pct-row"><span>Days</span><b>${daysLine}</b></div>
-            </div>
-          </div>
-
-          <div class="pct-daychips">
-            ${dayChipHTML("Longest Day", s.longest)}
-            ${dayChipHTML("Shortest Day", s.shortest)}
-          </div>
-        </div>
-      </div>
-    `;
-  }
 
   function findLatestFeature(track) {
     const feats = (track && track.features) ? track.features : [];
