@@ -642,31 +642,13 @@
 
   const avgSpeedMain = s.avgMph ? `${fmtNumber(s.avgMph, 1)} mi/h` : "—";
   const avgSpeedSub = "";
-    
-  const avgMilesPerActiveDay = s.activeDays > 0 ? (s.totalMi / s.activeDays) : null;
-
-let projectedFinish = "—";
-if (avgMilesPerActiveDay && avgMilesPerActiveDay > 0) {
-  const daysRemaining = s.remainingMi / avgMilesPerActiveDay;
-  const finishDate = new Date(Date.now() + daysRemaining * 86400000);
-  projectedFinish = finishDate.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-  });
-}
 
   statsListEl.innerHTML = `
     <div class="pct-stats-wrap">
-      <div class="pct-chip-grid">
-        <div class="pct-chip">
-          <div class="label">Total Distance</div>
-          <div class="value">${fmtNumber(s.totalMi, 1)} mi</div>
-        </div>
-    
-        <div class="pct-chip">
-          <div class="label">Projected Finish</div>
-          <div class="value">${projectedFinish}</div>
+      <div class="pct-stat-hero">
+        <div class="label">Total Distance</div>
+        <div class="big">
+          <div class="primary">${fmtNumber(s.totalMi, 1)} mi</div>
         </div>
       </div>
 
