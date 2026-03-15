@@ -657,18 +657,18 @@ if (avgMilesPerActiveDay && avgMilesPerActiveDay > 0) {
 }
 
   statsListEl.innerHTML = `
-    <div class="pct-stat-hero">
+    <div class="pct-stats-wrap">
       <div class="pct-chip-grid">
-        <div>
+        <div class="pct-chip">
           <div class="label">Total Distance</div>
           <div class="value">${fmtNumber(s.totalMi, 1)} mi</div>
         </div>
-        <div>
+    
+        <div class="pct-chip">
           <div class="label">Projected Finish</div>
           <div class="value">${projectedFinish}</div>
         </div>
       </div>
-    </div>
 
       <div class="pct-chip-grid">
         <div class="pct-chip">
