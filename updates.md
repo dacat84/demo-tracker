@@ -9,6 +9,13 @@ nav: updates
   <h2 class="updates-title">Trail Updates</h2>
 
 <div class="update-card">
+    <div class="update-date">April 9, 2026</div>
+    <div class="update-text">
+      Got in midday to Warner Springs Community Center, charged up, resupplied, and talked with other pct'ers. The next 4 days will be all uphill, approx 6k ft of climb to a town called Idyllwild. Should be cool weather so no worries about 15mi stretches of wayer carry. 
+    </div>
+  </div>
+
+<div class="update-card">
     <div class="update-date">April 7, 2026</div>
     <div class="update-text">
       Fossil Lady (trailangel) gave us a ride at 7am back to Scissors Crossing, plan is to walk 15mi to first water cache then maybe another 5mi to camp. Ditched size 13's in town (shipped home) and picked up 12.5 wides + toe socks. Climbing ~3k ft today, hopefully clouds roll in and its not all sun. 
