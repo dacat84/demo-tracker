@@ -9,6 +9,14 @@ nav: updates
   <h2 class="updates-title">Trail Updates</h2>
 
 <div class="update-card">
+    <div class="update-date">April 11, 2026</div>
+    <div class="update-text">
+      Camped behind Paradise Valley Cafe last night. Started up San Jacinto today, walking 20ish today, 12 tomorrow. midday tommorow make our way into Idyllwild for a zero day. summit san jac on tuesday. 
+    </div>
+  </div>
+
+
+<div class="update-card">
     <div class="update-date">April 9, 2026</div>
     <div class="update-text">
       Got in midday yesterday (4/8) to Warner Springs Community Center, charged up, resupplied, and talked with other pct'ers. The next 4 days will be all uphill, approx 6k ft of climb to a town called Idyllwild. Should be cool weather so no worries about 15mi stretches of wayer carry. 
