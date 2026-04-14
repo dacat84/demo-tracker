@@ -9,6 +9,13 @@ nav: updates
   <h2 class="updates-title">Trail Updates</h2>
 
 <div class="update-card">
+    <div class="update-date">April 14, 2026</div>
+    <div class="update-text">
+      Rained and hailed most of last night in Idyllwild. Woke up to blue sky's and the sun warming everything up. We go back up to summit San Jacinto this morning, sanjacjon.com is best place to see mtn conditions. After summit to 10,600ft we walk down to appox 6,700ft to camp. Should be about a 17mi day.
+    </div>
+  </div>
+
+<div class="update-card">
     <div class="update-date">April 13, 2026</div>
     <div class="update-text">
       Came off San Jacinto yesterday, storm blew through and lightly dusted the peak with snow. Taking a zero day today in Idyllwild, going back up tomorrow. To summit San Jac will be 6mi of straight up and 5k ft of climb from
