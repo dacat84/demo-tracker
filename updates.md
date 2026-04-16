@@ -9,6 +9,13 @@ nav: updates
   <h2 class="updates-title">Trail Updates</h2>
 
 <div class="update-card">
+    <div class="update-date">April 16, 2026</div>
+    <div class="update-text">
+      Had a great stay at Nitsy's. Shower, laundry, dinner and breakfast. She's dropping us off back at the trail at ~6:30. 19mi day ahead, next town is Big Bear. Going to be paying extra attention with stops and stretching of my ankles/legs. 
+    </div>
+  </div>
+
+<div class="update-card">
     <div class="update-date">April 15, 2026</div>
     <div class="update-text">
       Going up to the peak of San Jacinto (10,800ft) yesterday and now back down to 1,700ft today has kicked my butt. Snow and slush up on San Jac and now its desert next to Palm Springs. Nitsy (trail angel) is picking us up at mile 209 (hwy 10), we are staying the night at her place and back on the trail tomorrow.
