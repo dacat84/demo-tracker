@@ -9,7 +9,7 @@ head_extra: |
     .status-card {
       position: relative;
       overflow: hidden;
-    }Page_DownPage_DownPage_DownPage_DownPage_Down
+    }
 
     .status-card .status-header {
       display: flex;
