@@ -294,13 +294,22 @@ function setStatsUI(s) {
   if (s.last7 && s.last7.length > 1) {
     const maxDist = Math.max(...s.last7.map(d => d.distM));
     const bars = s.last7.map(d => {
-      const minDist = Math.min(...s.last7.map(x => x.distM)); const range = maxDist - minDist; const pct = maxDist > 0 ? (range > maxDist * 0.15 ? Math.max(15, ((d.distM - minDist) / range) * 80 + 15) : Math.max(30, (d.distM / maxDist) * 100)) : 30;
+      const minDist = Math.min(...s.last7.map(x => x.distM));
+      const range = maxDist - minDist;
+      const pct = maxDist > 0 ? (range > maxDist * 0.15 ? Math.max(15, ((d.distM - minDist) / range) * 80 + 15) : Math.max(30, (d.distM / maxDist) * 100)) : 30;
       const dayLabel = new Date(d.date + "T12:00:00").toLocaleDateString('en-US', { weekday: "short" });
       const km = fmtNumber(toKm(d.distM), 0) + ' km';
       const isLast = d.date === s.lastDay;
-      return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><div style="font-size:10px;color:rgba(245,248,255,.55);font-weight:700;white-space:nowrap">' + km + '</div><div style="width:100%;height:60px;display:flex;align-items:flex-end"><div style="width:100%;height:' + pct + '%;border-radius:4px 4px 2px 2px;background:' + (isLast ? 'linear-gradient(180deg,rgba(70,243,255,.9),rgba(70,243,255,.5))' : 'rgba(255,255,255,.18)') + '"></div></div><div style="font-size:10px;color:rgba(245,248,255,' + (isLast ? '.85' : '.45') + ');font-weight:' + (isLast ? '800' : '600') + '">' + dayLabel + '</div></div>';
+      return '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px">'
+        + '<div style="font-size:10px;color:rgba(245,248,255,.55);font-weight:700;white-space:nowrap;text-align:center">' + km + '</div>'
+        + '<div style="width:100%;flex:1;display:flex;align-items:flex-end">'
+        + '<div style="width:100%;height:' + pct + '%;min-height:4px;border-radius:3px 3px 2px 2px;background:' + (isLast ? 'linear-gradient(180deg,rgba(70,243,255,.9),rgba(70,243,255,.5))' : 'rgba(255,255,255,.18)') + '"></div>'
+        + '</div>'
+        + '<div style="font-size:10px;color:rgba(245,248,255,' + (isLast ? '.85' : '.45') + ');font-weight:' + (isLast ? '800' : '600') + ';text-align:center">' + dayLabel + '</div>'
+        + '</div>';
     }).join("");
-    last7Section = '<div class="pct-section" style="margin-top:10px"><div class="pct-sectioRecent Days</div><div style="display:flex;gap:6px;align-items:flex-end;padding:4px 0">' + bars + '</div></div>';
+    last7Section = '<div class="pct-section" style="margin-top:10px"><div class="pct-section-title">Recent Days</div>'
+      + '<div style="display:flex;flex-direction:row;gap:6px;align-items:stretch;height:90px;padding:4px 0;overflow:hidden">' + bars + '</div></div>';
   }
   insightsListEl.innerHTML = '<div class="pct-sections">' + todaySection + last7Section + '<div class="pct-section" style="margin-top:10px"><div class="pct-section-title">Progress</div><div class="pct-rows"><div class="pct-row"><span>PCT completed</span><b>' + pctLine + '</b></div><div class="pct-progressbar"><div class="pct-progressfill" style="width:' + pctWidth + '%"></div></div><div class="pct-row" style="margin-top:6px"><span>Remaining</span><b>' + fmtNumber(s.remainingKm, 1) + ' km / ' + fmtNumber(s.remainingMi, 1) + ' mi</b></div></div></div><div class="pct-section" style="margin-top:10px"><div class="pct-section-title">Timeline</div><div class="pct-rows"><div class="pct-row"><span>First activity</span><b>' + (s.firstTs ? new Date(s.firstTs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : "—") + '</b></div><div class="pct-row"><span>Last activity</span><b>' + (s.lastTs ? new Date(s.lastTs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : "—") + '</b></div><div class="pct-row"><span>Days</span><b>' + daysLine + '</b></div></div></div><div class="pct-daychips" style="margin-top:10px">' + chip("Longest Day", s.longest) + chip("Shortest Day", s.shortest) + '</div></div>';
 }
