@@ -29,9 +29,7 @@ body{
   padding:0 var(--pad);
 }
 
-.site-header{ position:sticky; top:0; z-index:1000; backdrop-filter:blur(16px) saturate(180%); background:rgba(11,14,17,.82); border-bottom:1px solid rgba(255,255,255,.07); box-shadow:0 1px 0 rgba(255,255,255,.04),0 8px 32px rgba(0,0,0,.4); } .site-header .wrap{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px var(--pad); } .brand{ display:flex; align-items:center; gap:10px; } .brand-icon{ width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg,rgba(70,243,255,.25),rgba(255,75,216,.25)); border:1px solid rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; } .brand-title{ font-weight:800; font-size:15px; letter-spacing:.2px; background:linear-gradient(90deg,#e8eef5 0%,rgba(70,243,255,.9) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; } .brand-sub{ color:rgba(232,238,245,.45); font-size:11px; margin-top:1px; letter-spacing:.1px; } .tabs{ display:flex; gap:6px; flex-wrap:wrap; } .tab{ text-decoration:none; color:rgba(232,238,245,.55); padding:7px 13px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); font-size:13px; font-weight:600; letter-spacing:.1px; transition:all .15s ease; } .tab:hover{ color:rgba(232,238,245,.85); background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.14); text-decoration:none; } .tab.active{ color:#e8eef5; border-color:rgba(70,243,255,.4); background:rgba(70,243,255,.08); box-shadow:0 0 16px rgba(70,243,255,.12),inset 0 0 0 1px rgba(70,243,255,.15); }
-
-/* Mehr vertikaler Abstand im Content */
+.site-header{ position:sticky; top:0; z-index:1000; backdrop-filter:blur(20px) saturate(180%); background:rgba(17,22,28,.85); border-bottom:1px solid rgba(232,238,245,.12); box-shadow:0 4px 24px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.04); } .site-header .wrap{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px var(--pad); } .brand{ display:flex; align-items:center; gap:10px; } .brand-title{ font-weight:800; font-size:15px; letter-spacing:.2px; color:rgba(232,238,245,.95); } .brand-sub{ color:rgba(232,238,245,.45); font-size:11px; margin-top:1px; } .tabs{ display:flex; gap:6px; flex-wrap:wrap; } .tab{ text-decoration:none; color:rgba(232,238,245,.55); padding:7px 13px; border-radius:999px; border:1px solid rgba(232,238,245,.12); background:rgba(17,22,28,.55); font-size:13px; font-weight:600; transition:all .15s ease; } .tab:hover{ color:rgba(232,238,245,.85); background:rgba(232,238,245,.08); border-color:rgba(232,238,245,.18); text-decoration:none; } .tab.active{ color:var(--text); border-color:rgba(126,231,135,.4); background:rgba(126,231,135,.08); box-shadow:0 0 12px rgba(126,231,135,.10),inset 0 0 0 1px rgba(126,231,135,.15); } /* Mehr vertikaler Abstand im Content */
 main.wrap{
   padding: 22px var(--pad) 46px;
 }
@@ -49,14 +47,14 @@ main.wrap{
   background: rgba(17,22,28,.72);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 18px 18px;
+  padding: 20px 18px;
   box-shadow: var(--shadow);
 }
 .card + .card{ margin-top: 14px; }
 
 .card-title{
   font-weight:700;
-  margin-bottom:6px;
+  margin-bottom:10px;
   letter-spacing: .1px;
 }
 
