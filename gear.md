@@ -15,8 +15,8 @@ permalink: /gear/
   <div class="lp-shell">
     <div class="lp-frame">
       <!-- Lighterpack embed -->
-      <script src="https://grampacker.net/r/j1wteq"></script>
-      <div id="lm2int"></div>
+      <script src="https://grampacker.net/e/j1wteq"></script>
+      <div id="j1wteq"></div>
     </div>
   </div>
 </div>
