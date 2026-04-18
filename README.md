@@ -1,4 +1,4 @@
-# PCT Trail Tracker
+# PCT Tracker
 
 A lightweight personal trail tracker built with GitHub Pages.
 
