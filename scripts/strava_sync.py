@@ -1,4 +1,4 @@
-import os, json, math, urllib.request, urllib.parse
+import os, json, math, urllib.request, urllib.parse, datetime, sys
 
 CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
 CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
@@ -8,8 +8,9 @@ TRACK_PATH = "data/track.geojson"
 LATEST_PATH = "data/latest.json"
 STATE_PATH = "data/strava_state.json"
 
-# Wie viele Punkte fürs Höhenprofil maximal gespeichert werden (Dateigröße!)
 PROFILE_MAX_POINTS = 220
+COORDS_MAX_POINTS = 300
+TOKEN_WARN_DAYS = 150
 
 
 def post_form(url, data):
@@ -50,7 +51,6 @@ def get_recent_activities(access_token):
 
 
 def get_stream(access_token, activity_id):
-    # Wichtig: altitude dazu!
     url = (
         f"https://www.strava.com/api/v3/activities/{activity_id}/streams"
         f"?keys=latlng,time,altitude&key_by_type=true"
@@ -69,7 +69,6 @@ def haversine_m(lat1, lon1, lat2, lon2):
 
 
 def downsample_series(xs, ys, max_points):
-    """gleichmäßig ausdünnen (ohne Libs), xs/ys gleiche Länge"""
     n = min(len(xs), len(ys))
     if n <= max_points:
         return xs[:n], ys[:n]
@@ -83,33 +82,73 @@ def downsample_series(xs, ys, max_points):
     return out_x, out_y
 
 
+def downsample_coords(coords, max_points):
+    n = len(coords)
+    if n <= max_points:
+        return coords
+    step = (n - 1) / (max_points - 1)
+    result = []
+    for i in range(max_points):
+        idx = int(round(i * step))
+        idx = max(0, min(n - 1, idx))
+        result.append(coords[idx])
+    return result
+
+
+def check_token_age():
+    if not os.path.exists(STATE_PATH):
+        return
+    try:
+        with open(STATE_PATH) as f:
+            state = json.load(f)
+        last_sync_str = state.get("last_sync_utc")
+        if not last_sync_str:
+            return
+        last_sync = datetime.datetime.fromisoformat(last_sync_str)
+        days_ago = (datetime.datetime.utcnow() - last_sync).days
+        if days_ago >= TOKEN_WARN_DAYS:
+            print(
+                f"::warning::Strava refresh token has not been used for {days_ago} days. "
+                f"Tokens expire after ~6 months of inactivity. "
+                f"Re-authorize at https://www.strava.com/settings/apps if sync starts failing.",
+                file=sys.stderr
+            )
+        else:
+            print(f"Token last used {days_ago} days ago - OK.")
+    except Exception as e:
+        print(f"Could not check token age: {e}")
+
+
 def main():
+    check_token_age()
     access = refresh_access_token()
+    print("Access token refreshed successfully.")
 
     activities = get_recent_activities(access)
-    activities.sort(key=lambda a: a.get("start_date", ""))  # älteste -> neueste
+    activities.sort(key=lambda a: a.get("start_date", ""))
 
     track = {"type": "FeatureCollection", "features": []}
     latest = None
     kept_ids = []
+    total_coords_before = 0
+    total_coords_after = 0
 
     for a in activities:
         act_id = int(a["id"])
-
         streams = get_stream(access, act_id)
-
         latlng = streams.get("latlng", {}).get("data", [])
         if not latlng or len(latlng) < 2:
             continue
 
         altitude = streams.get("altitude", {}).get("data", [])
-        # altitude kann fehlen/leer sein -> dann kein Profil
         has_alt = bool(altitude) and len(altitude) == len(latlng)
 
-        # GeoJSON coords [lon, lat]
-        coords = [[p[1], p[0]] for p in latlng]
+        total_coords_before += len(latlng)
+        latlng_ds = downsample_coords(latlng, COORDS_MAX_POINTS)
+        total_coords_after += len(latlng_ds)
 
-        # Profil: cumulative distance (m) + altitude (m)
+        coords = [[p[1], p[0]] for p in latlng_ds]
+
         dist_m = [0.0]
         elev_m = [float(altitude[0])] if has_alt else []
         total_up = 0.0
@@ -118,24 +157,18 @@ def main():
             prev_lat, prev_lon = latlng[0][0], latlng[0][1]
             prev_e = float(altitude[0])
             cum = 0.0
-
             for i in range(1, len(latlng)):
                 lat, lon = latlng[i][0], latlng[i][1]
                 d = haversine_m(prev_lat, prev_lon, lat, lon)
                 cum += d
                 dist_m.append(cum)
-
                 e = float(altitude[i])
                 elev_m.append(e)
-
                 delta = e - prev_e
                 if delta > 0:
                     total_up += delta
-
                 prev_lat, prev_lon = lat, lon
                 prev_e = e
-
-            # ausdünnen für Datei
             dist_m_ds, elev_m_ds = downsample_series(dist_m, elev_m, PROFILE_MAX_POINTS)
         else:
             dist_m_ds, elev_m_ds = [], []
@@ -144,7 +177,6 @@ def main():
         feature = {
             "type": "Feature",
             "properties": {
-                # i für alternierende Farben
                 "strava_id": act_id,
                 "name": a.get("name", ""),
                 "start_date": a.get("start_date", ""),
@@ -152,21 +184,17 @@ def main():
                 "moving_time_s": int(a.get("moving_time", 0) or 0),
                 "type": a.get("type", ""),
                 "elevation_gain_m": float(total_up),
-                # Profil-Daten (für Popup-Chart)
-                "profile_dist_m": dist_m_ds,    # x
-                "profile_elev_m": elev_m_ds,    # y
+                "profile_dist_m": dist_m_ds,
+                "profile_elev_m": elev_m_ds,
             },
             "geometry": {"type": "LineString", "coordinates": coords}
         }
 
         track["features"].append(feature)
         kept_ids.append(act_id)
-
-        # latest: letzte Koordinate der neuesten Aktivität mit GPS
         last = latlng[-1]
         latest = {"lat": last[0], "lon": last[1], "ts": a.get("start_date", "")}
 
-    # Re-index stable: nach start_date sortieren und i setzen
     track["features"].sort(key=lambda f: f.get("properties", {}).get("start_date", ""))
     for idx, f in enumerate(track["features"]):
         f.setdefault("properties", {})
@@ -176,9 +204,17 @@ def main():
     if latest:
         save_json(LATEST_PATH, latest)
 
-    save_json(STATE_PATH, {"seen_ids": sorted(kept_ids)})
+    save_json(STATE_PATH, {
+        "seen_ids": sorted(kept_ids),
+        "last_sync_utc": datetime.datetime.utcnow().isoformat(),
+    })
 
+    reduction = (
+        round((1 - total_coords_after / total_coords_before) * 100)
+        if total_coords_before > 0 else 0
+    )
     print(f"Wrote {len(track['features'])} activities to {TRACK_PATH}.")
+    print(f"Coordinate downsampling: {total_coords_before} -> {total_coords_after} points ({reduction}% reduction).")
     if not latest:
         print("No GPS streams found (check Strava privacy/scope).")
 
