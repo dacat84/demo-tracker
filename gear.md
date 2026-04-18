@@ -7,7 +7,7 @@ permalink: /gear/
 <div class="card">
   <div class="card-title">Gear</div>
   <div class="card-sub">
-    A complete overview of the gear carried on trail, created with lighterpack.com
+    A complete overview of the gear carried on trail, created with grampacker.net
   </div>
 </div>
 
@@ -15,7 +15,7 @@ permalink: /gear/
   <div class="lp-shell">
     <div class="lp-frame">
       <!-- Lighterpack embed -->
-      <script src="https://lighterpack.com/e/lm2int"></script>
+      <script src="https://grampacker.net/r/j1wteq"></script>
       <div id="lm2int"></div>
     </div>
   </div>
