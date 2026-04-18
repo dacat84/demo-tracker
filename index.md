@@ -95,7 +95,7 @@ body_extra: |
       <div class="card-title">Status</div>
       <div class="status-badge" id="statusBadge" aria-label="Online status">
         <span class="status-dot"></span>
-        <span id="status">loading…</span>
+        <span id="status">loadingâ¦</span>
       </div>
     </div>
 
