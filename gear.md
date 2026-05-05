@@ -22,12 +22,12 @@ permalink: /gear/
 </div>
 
 <script>
-  // Lighterpack rendert ein iframe nachträglich – wir warten kurz, bis es da ist,
+  // Grampacker rendert ein iframe nachträglich – wir warten kurz, bis es da ist,
   // und setzen dann Styling am iframe-Element selbst (nicht im Inhalt).
   (function () {
     let tries = 0;
     const timer = setInterval(() => {
-      const iframe = document.querySelector('#lm2int iframe');
+      const iframe = document.querySelector('iframe');
       tries++;
 
       if (iframe) {
@@ -62,7 +62,7 @@ permalink: /gear/
   }
 
   /* Das iframe selbst: Höhe + “helles” Aussehen erzwingen */
-  #lm2int iframe{
+  iframe{
     width: 100% !important;
     height: 72vh !important;
     max-height: 900px !important;
@@ -76,7 +76,7 @@ permalink: /gear/
 
   /* Auf sehr kleinen Screens etwas mehr Höhe */
   @media (max-width: 520px){
-    #lm2int iframe{ height: 78vh !important; }
+    iframe{ height: 78vh !important; }
     .lp-shell{ padding: 10px; }
     .lp-frame{ padding: 10px; }
   }
