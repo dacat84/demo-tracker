@@ -386,12 +386,12 @@ function findLatestFeature(track) {
       map.addLayer({
         id: 'pct-bg-glow', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#e8eef5', 'line-width': 8, 'line-opacity': 0.08 }
+        paint: { 'line-color': '#ff6b2b', 'line-width': 8, 'line-opacity': 0.15 }
       });
       map.addLayer({
         id: 'pct-bg-line', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#e8eef5', 'line-width': 2, 'line-opacity': 0.45, 'line-dasharray': [6, 4] }
+        paint: { 'line-color': '#ff6b2b', 'line-width': 2, 'line-opacity': 0.55, 'line-dasharray': [6, 4] }
       });
       // Move PCT layers below user track if it exists
       ['pct-bg-glow', 'pct-bg-line'].forEach(id => {
