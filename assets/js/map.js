@@ -388,13 +388,18 @@ function findLatestFeature(track) {
         id: 'pct-bg-glow', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': '#e8eef5', 'line-width': 6, 'line-opacity': 0.04 }
-      }, 'track');
+      });
       // Thin dashed centerline
       map.addLayer({
         id: 'pct-bg-line', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': '#e8eef5', 'line-width': 1, 'line-opacity': 0.18, 'line-dasharray': [5, 4] }
-      }, 'track');
+      });
+      // Move PCT layers below track layer if it exists
+      if (map.getLayer('track')) {
+        map.moveLayer('pct-bg-glow', 'track');
+        map.moveLayer('pct-bg-line', 'track');
+      }
     } catch(e) { console.log('PCT bg:', e.message); }
   }
 
