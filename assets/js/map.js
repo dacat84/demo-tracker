@@ -387,7 +387,7 @@ function findLatestFeature(track) {
       map.addLayer({
         id: 'pct-bg-line', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#ffffff', 'line-width': 1.5, 'line-opacity': 0.5 }
+        paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 0.85 }
       });
       if (map.getLayer('track')) map.moveLayer('pct-bg-line', 'track');
     } catch(e) { console.log('PCT bg:', e.message); }
