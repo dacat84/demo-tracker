@@ -383,24 +383,21 @@ function findLatestFeature(track) {
       const geojson = await resp.json();
       if (map.getSource('pct-bg')) return;
       map.addSource('pct-bg', { type: 'geojson', data: geojson });
-      // Soft outer glow
       map.addLayer({
         id: 'pct-bg-glow', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': '#e8eef5', 'line-width': 6, 'line-opacity': 0.04 }
       });
-      // Thin dashed centerline
       map.addLayer({
         id: 'pct-bg-line', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#e8eef5', 'line-width': 1, 'line-opacity': 0.18, 'line-dasharray': [5, 4] }
+        paint: { 'line-color': '#e8eef5', 'line-width': 1, 'line-opacity': 0.2, 'line-dasharray': [5, 4] }
       });
-      // Move PCT layers below track layer if it exists
-      if (map.getLayer('track')) {
-        map.moveLayer('pct-bg-glow', 'track');
-        map.moveLayer('pct-bg-line', 'track');
-      }
+      // Move PCT layers below user track if it exists
+      ['pct-bg-glow', 'pct-bg-line'].forEach(id => {
+        if (map.getLayer('track')) map.moveLayer(id, 'track');
+      });
     } catch(e) { console.log('PCT bg:', e.message); }
   }
 
-})();
+  })();
