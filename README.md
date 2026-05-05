@@ -33,7 +33,7 @@ Live map, stats, photos, and trail updates — synced automatically from Strava.
   - No local image management needed
 
 - **Gear**
-  - Embedded gear list from [lighterpack.com](https://lighterpack.com)
+  - Embedded gear list from [grampacker.net](https://grampacker.net)
   - Always up to date without manual copying
 
 ---
@@ -96,7 +96,7 @@ It's a personal trail log, not a social feed.
 - Activity tracks: [Strava API](https://developers.strava.com/)
 - PCT centerline: [PCTA Open Data](https://www.pcta.org/discover-the-trail/maps/pct-data/) (CC BY 4.0)
 - Photos: [Flickr](https://flickr.com)
-- Gear list: [Lighterpack](https://lighterpack.com)
+- Gear list: [Grampacker](https://grampacker.net)
 
 ---
 
