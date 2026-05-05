@@ -372,5 +372,30 @@ function findLatestFeature(track) {
     }
   }
 
-  map.on("load", () => { injectUICSSOnce(); refresh(); setInterval(refresh, 60_000); });
+  map.on("load", () => { injectUICSSOnce(); refresh(); setInterval(refresh, 60_000); loadPCTRoute(); });
+
+  // PCT Background Route (official PCTA centerline)
+  async function loadPCTRoute() {
+    try {
+      const url = new URL('./data/Full_PCT_Simplified.geojson', window.location.href).toString();
+      const resp = await fetch(url);
+      if (!resp.ok) return;
+      const geojson = await resp.json();
+      if (map.getSource('pct-bg')) return;
+      map.addSource('pct-bg', { type: 'geojson', data: geojson });
+      // Soft outer glow
+      map.addLayer({
+        id: 'pct-bg-glow', type: 'line', source: 'pct-bg',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#e8eef5', 'line-width': 6, 'line-opacity': 0.04 }
+      }, 'track');
+      // Thin dashed centerline
+      map.addLayer({
+        id: 'pct-bg-line', type: 'line', source: 'pct-bg',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#e8eef5', 'line-width': 1, 'line-opacity': 0.18, 'line-dasharray': [5, 4] }
+      }, 'track');
+    } catch(e) { console.log('PCT bg:', e.message); }
+  }
+
 })();
