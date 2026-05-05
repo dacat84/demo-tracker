@@ -383,18 +383,26 @@ function findLatestFeature(track) {
       const geojson = await resp.json();
       if (map.getSource('pct-bg')) return;
       map.addSource('pct-bg', { type: 'geojson', data: geojson });
+      // White halo/outline — visible on dark satellite maps
       map.addLayer({
-        id: 'pct-bg-glow', type: 'line', source: 'pct-bg',
+        id: 'pct-bg-halo', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#ff6b2b', 'line-width': 8, 'line-opacity': 0.15 }
+        paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 }
       });
+      // Black outline — visible on light OSM maps
+      map.addLayer({
+        id: 'pct-bg-outline', type: 'line', source: 'pct-bg',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#000000', 'line-width': 4, 'line-opacity': 0.12 }
+      });
+      // Main line — dashed, medium opacity, works on both
       map.addLayer({
         id: 'pct-bg-line', type: 'line', source: 'pct-bg',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#ff6b2b', 'line-width': 2, 'line-opacity': 0.55, 'line-dasharray': [6, 4] }
+        paint: { 'line-color': '#ff8c00', 'line-width': 2, 'line-opacity': 0.6, 'line-dasharray': [6, 4] }
       });
-      // Move PCT layers below user track if it exists
-      ['pct-bg-glow', 'pct-bg-line'].forEach(id => {
+      // Move all PCT layers below user track
+      ['pct-bg-halo', 'pct-bg-outline', 'pct-bg-line'].forEach(id => {
         if (map.getLayer('track')) map.moveLayer(id, 'track');
       });
     } catch(e) { console.log('PCT bg:', e.message); }
