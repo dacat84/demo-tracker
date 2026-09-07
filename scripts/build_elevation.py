@@ -19,7 +19,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC  = ROOT / "data" / "Full_PCT_Simplified.geojson"
 OUT  = ROOT / "data" / "pct_profile.json"
 
-TARGET_POINTS = 500                         # resolution of the final profile
+TARGET_POINTS = 2000                        # resolution of the final profile
 DEM_URL = "https://api.opentopodata.org/v1/srtm30m"
 BATCH   = 100                               # OpenTopoData max locations / request
 PAUSE   = 1.1                               # be polite to the free endpoint
