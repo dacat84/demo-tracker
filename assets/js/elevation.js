@@ -22,14 +22,14 @@
     climb: "H\u00f6henprofil <b>P</b>acific <b>C</b>rest <b>T</b>rail", nowAt: "Aktuell ",
     here: "Standort", legPass: "Pass / Gipfel", legSide: "Abstecher", legTown: "Versorgungsort",
     legState: "Voll = getrackt \u00B7 blass = noch nicht", near: "Nahe ",
-    distWord: "Distanz", altWord: "H\u00f6he", resupply: "Versorgungsort"
+    distWord: "Distanz", altWord: "H\u00f6he", resupply: "Versorgungsort", zoomHint: "Sektion antippen zum Zoomen"
   } : {
     liveDay: "Day", inThe: "I'm in the ", rightNow: " right now.",
     fromCampo: " from Campo", nearestWp: " \u00B7 next waypoint ", stillPre: "", toEnd: " still to the Northern Terminus.",
     climb: "<b>P</b>acific <b>C</b>rest <b>T</b>rail elevation profile", nowAt: "Now at ",
     here: "You are here", legPass: "Pass / peak", legSide: "Side trip", legTown: "Resupply town",
     legState: "Solid = tracked \u00B7 faded = not yet", near: "Near ",
-    distWord: "distance", altWord: "elevation", resupply: "Resupply"
+    distWord: "distance", altWord: "elevation", resupply: "Resupply", zoomHint: "Tap a section to zoom"
   };
   var REG_DE = {
     "Southern California": "S\u00fcdkalifornien", "Southern Sierra": "S\u00fcdliche Sierra",
@@ -109,7 +109,9 @@
       ".el-townpop.show{opacity:1}" +
       ".el-townpop::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1e241c}" +
       ".el-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font:11.5px Inter,system-ui,sans-serif;color:#6c7365}" +
-      ".el-legend span{display:inline-flex;align-items:center;gap:6px}";
+      ".el-legend span{display:inline-flex;align-items:center;gap:6px}" +
+      ".el-band{cursor:pointer;transition:filter .1s ease}.el-band:hover{filter:brightness(1.07)}" +
+      ".el-back{position:absolute;top:8px;left:8px;z-index:5;background:#fff;border:1px solid #e2e0d4;border-radius:8px;padding:4px 10px;font:600 11.5px Inter,system-ui,sans-serif;color:#3e6b46;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}.el-back:hover{background:#f4f2ea}";
     document.head.appendChild(s);
   }
 
@@ -187,7 +189,7 @@
 
   function fillHero(reg, F) {
     if (!CUR) return;
-    var scale = NOMINAL / TOTAL_KM;                 // show official 4265 km / 2650 mi, not the simplified length
+    var scale = NOMINAL / TOTAL_KM;
     var pos = CUR.km * scale;
     var toGo = Math.max(0, NOMINAL - pos);
     var pct = Math.round((pos / NOMINAL) * 100);
@@ -265,140 +267,168 @@
     if (!container) return;
 
     var W = 1000, H = 320, PADL = 46, PADR = 10, PADT = 56, baseY = 200, maxM = 4200;
-    // lift the sampled line at named passes to their true elevation so the profile meets the marker
     PASSES.forEach(function (p) {
       if (p.el == null) return;
       var target = p.km * F, bi = 0, bd = 1e18;
       for (var i = 0; i < S.length; i++) { var d = Math.abs(S[i][0] - target); if (d < bd) { bd = d; bi = i; } }
       S[bi][1] = Math.max(S[bi][1], Math.min(p.el, maxM));
     });
-    function x(km) { return PADL + (km / TOTAL) * (W - PADL - PADR); }
     function y(m) { return PADT + (1 - m / maxM) * (baseY - PADT); }
-    var markX = x(cur.km), markY = y(cur.m);
-
     var GRID = DE ? [[1000, "1k"], [2000, "2k"], [3000, "3k"], [4000, "4k"]]
                   : [[914, "3k"], [1829, "6k"], [2743, "9k"], [3658, "12k"]];
+    var bY = baseY + 8, bH = 22, lY = bY + bH + 18;
 
-    var line = "M " + x(S[0][0]).toFixed(1) + " " + y(S[0][1]).toFixed(1);
-    S.forEach(function (pt) { line += " L " + x(pt[0]).toFixed(1) + " " + y(pt[1]).toFixed(1); });
-    var area = line + " L " + x(TOTAL) + " " + baseY + " L " + x(0) + " " + baseY + " Z";
+    var viewA = 0, viewB = TOTAL;
 
-    var walkedClip = "";
-    walked.forEach(function (r) { walkedClip += '<rect x="' + x(r[0]) + '" y="0" width="' + (x(r[1]) - x(r[0])) + '" height="' + baseY + '"/>'; });
+    function draw() {
+      var full = viewA <= 0.5 && viewB >= TOTAL - 0.5;
+      function x(km) { return PADL + ((km - viewA) / (viewB - viewA)) * (W - PADL - PADR); }
+      var markX = x(cur.km), markY = y(cur.m), markerInView = cur.km >= viewA && cur.km <= viewB;
 
-    var grid = '<line x1="' + PADL + '" y1="' + baseY + '" x2="' + (W - PADR) + '" y2="' + baseY + '" stroke="#00000010"/>';
-    GRID.forEach(function (g) {
-      var gy = y(g[0]);
-      grid += '<line x1="' + PADL + '" y1="' + gy + '" x2="' + (W - PADR) + '" y2="' + gy + '" stroke="#00000010"/>' +
-              '<text x="' + (PADL - 6) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="10" fill="#9aa08f" font-family="Inter">' + g[1] + '</text>';
-    });
+      var line = "M " + x(S[0][0]).toFixed(1) + " " + y(S[0][1]).toFixed(1);
+      S.forEach(function (pt) { line += " L " + x(pt[0]).toFixed(1) + " " + y(pt[1]).toFixed(1); });
+      var area = line + " L " + x(TOTAL) + " " + baseY + " L " + x(0) + " " + baseY + " Z";
 
-    var bY = baseY + 8, bH = 22, bands = "";
-    REGIONS.forEach(function (r) {
-      var rx = x(r.a * F), rw = x(r.b * F) - x(r.a * F), ahead = r.a * F >= cur.km;
-      bands += '<rect x="' + (rx + 1) + '" y="' + bY + '" width="' + (rw - 2) + '" height="' + bH + '" rx="5" fill="' + r.c + '" opacity="' + (ahead ? 0.34 : 0.9) + '"/>';
-      if (rw > 74) bands += '<text x="' + (rx + rw / 2) + '" y="' + (bY + bH / 2 + 3.5) + '" text-anchor="middle" font-size="10" font-family="Inter" font-weight="600" fill="#2c3327" opacity="' + (ahead ? 0.5 : 0.92) + '">' + regName(r) + '</text>';
-    });
+      var walkedClip = "";
+      walked.forEach(function (r) { walkedClip += '<rect x="' + x(r[0]) + '" y="0" width="' + (x(r[1]) - x(r[0])) + '" height="' + baseY + '"/>'; });
 
-    var lY = bY + bH + 18, land = "";
-    LAND.forEach(function (m) {
-      var lx = x(m.km * F), done = inWalked(m.km * F);
-      var col = m.t === "park" ? "#3e9a51" : m.t === "desert" ? "#d19a3a" : "#9aa08f";
-      var dash = m.t === "desert" ? 'stroke-dasharray="2 2"' : "";
-      land += '<line x1="' + lx + '" y1="' + (bY + bH + 2) + '" x2="' + lx + '" y2="' + (lY - 3) + '" stroke="' + col + '" stroke-width="1.3" ' + dash + ' opacity="' + (done ? 0.8 : 0.4) + '"/>';
-      land += m.t === "park"
-        ? '<circle cx="' + lx + '" cy="' + lY + '" r="2.6" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '"/>'
-        : '<rect x="' + (lx - 2) + '" y="' + (lY - 2) + '" width="4" height="4" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '" transform="rotate(45 ' + lx + ' ' + lY + ')"/>';
-      var edge = lx > W - 95;
-      land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (edge ? (lY + 13) : (lY + 5)) + '" text-anchor="' + (edge ? 'middle' : 'start') + '"' + (edge ? '' : ' transform="rotate(26 ' + lx + ' ' + lY + ')"') + ' font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
-    });
+      var grid = '<line x1="' + PADL + '" y1="' + baseY + '" x2="' + (W - PADR) + '" y2="' + baseY + '" stroke="#00000010"/>';
+      GRID.forEach(function (g) {
+        var gy = y(g[0]);
+        grid += '<line x1="' + PADL + '" y1="' + gy + '" x2="' + (W - PADR) + '" y2="' + gy + '" stroke="#00000010"/>' +
+                '<text x="' + (PADL - 6) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="10" fill="#9aa08f" font-family="Inter">' + g[1] + '</text>';
+      });
 
-    var townData = [];
-    var towns = "";
-    TOWNS.forEach(function (t, i) {
-      var km = t[0] * F, tx = x(km), done = inWalked(km), dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
-      townData.push({ tx: tx, name: t[2] || t[1], km: t[0] * F });
-      towns += '<circle cx="' + tx + '" cy="' + baseY + '" r="1.9" fill="' + dot + '"/>';
-      towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
-      towns += '<rect class="el-townhit" data-i="' + i + '" x="' + (tx - 6) + '" y="' + (baseY - 48) + '" width="12" height="54"/>';
-    });
+      var bands = "";
+      REGIONS.forEach(function (r, ri) {
+        var rx = x(r.a * F), rw = x(r.b * F) - x(r.a * F), ahead = r.a * F >= cur.km;
+        bands += '<rect class="el-band" data-r="' + ri + '" x="' + (rx + 1) + '" y="' + bY + '" width="' + (rw - 2) + '" height="' + bH + '" rx="5" fill="' + r.c + '" opacity="' + (ahead ? 0.34 : 0.9) + '"/>';
+        if (rw > 74) bands += '<text x="' + (rx + rw / 2) + '" y="' + (bY + bH / 2 + 3.5) + '" text-anchor="middle" font-size="10" font-family="Inter" font-weight="600" fill="#2c3327" opacity="' + (ahead ? 0.5 : 0.92) + '" pointer-events="none">' + regName(r) + '</text>';
+      });
 
-    var passes = "";
-    PASSES.forEach(function (p) {
-      var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(pk.m);
-      var col = p.side ? "#cf7440" : "#2c7a3d", dash = p.side ? 'stroke-dasharray="3 2"' : "";
-      var labelX;
-      if (p.lox != null) {
-        var lx2 = px + p.lox;
-        passes += '<line x1="' + lx2 + '" y1="' + (p.ly + 4) + '" x2="' + px + '" y2="' + (p.ly + 4) + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
-        passes += '<line x1="' + px + '" y1="' + (p.ly + 4) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
-        labelX = lx2;
-      } else {
-        passes += '<line x1="' + px + '" y1="' + (p.ly + 3) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
-        labelX = px + (p.dx || 0);
-      }
-      passes += '<circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
-      passes += '<text x="' + labelX + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
-    });
+      var land = "";
+      LAND.forEach(function (m) {
+        var lx = x(m.km * F), done = inWalked(m.km * F);
+        var col = m.t === "park" ? "#3e9a51" : m.t === "desert" ? "#d19a3a" : "#9aa08f";
+        var dash = m.t === "desert" ? 'stroke-dasharray="2 2"' : "";
+        land += '<line x1="' + lx + '" y1="' + (bY + bH + 2) + '" x2="' + lx + '" y2="' + (lY - 3) + '" stroke="' + col + '" stroke-width="1.3" ' + dash + ' opacity="' + (done ? 0.8 : 0.4) + '"/>';
+        land += m.t === "park"
+          ? '<circle cx="' + lx + '" cy="' + lY + '" r="2.6" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '"/>'
+          : '<rect x="' + (lx - 2) + '" y="' + (lY - 2) + '" width="4" height="4" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '" transform="rotate(45 ' + lx + ' ' + lY + ')"/>';
+        var edge = lx > W - 95;
+        land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (edge ? (lY + 13) : (lY + 5)) + '" text-anchor="' + (edge ? 'middle' : 'start') + '"' + (edge ? '' : ' transform="rotate(26 ' + lx + ' ' + lY + ')"') + ' font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
+      });
 
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="PCT elevation profile">' +
-      '<defs><clipPath id="elWalked">' + walkedClip + '</clipPath>' +
-      '<linearGradient id="elG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fae62" stop-opacity=".9"/><stop offset="1" stop-color="#4fae62" stop-opacity=".35"/></linearGradient></defs>' +
-      grid +
-      '<path d="' + area + '" fill="#9db8a4" opacity=".26"/>' +
-      '<path d="' + area + '" clip-path="url(#elWalked)" fill="url(#elG)"/>' +
-      '<path d="' + line + '" fill="none" stroke="#2f7a3e" stroke-width="1.4" opacity=".7"/>' +
-      passes + towns + bands + land +
-      '<line x1="' + markX + '" y1="' + markY + '" x2="' + markX + '" y2="' + (bY + bH) + '" stroke="#cf7440" stroke-width="1.6" stroke-dasharray="4 3"/>' +
-      '<circle cx="' + markX + '" cy="' + markY + '" r="10" fill="none" stroke="#cf7440" stroke-width="1.6" opacity=".4"/>' +
-      '<circle cx="' + markX + '" cy="' + markY + '" r="6.5" fill="#cf7440"/><circle cx="' + markX + '" cy="' + markY + '" r="2.4" fill="#fff"/>' +
-      '</svg>';
+      var townData = [];
+      var towns = "";
+      TOWNS.forEach(function (t, i) {
+        var km = t[0] * F, tx = x(km), done = inWalked(km), dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
+        townData.push({ tx: tx, name: t[2] || t[1], km: t[0] * F });
+        towns += '<circle cx="' + tx + '" cy="' + baseY + '" r="1.9" fill="' + dot + '"/>';
+        towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
+        towns += '<rect class="el-townhit" data-i="' + i + '" x="' + (tx - 6) + '" y="' + (baseY - 48) + '" width="12" height="54"/>';
+      });
 
-    container.innerHTML =
-      '<div class="el-card"><div class="el-head"><h2>' + STR.climb + '</h2>' +
-      '<div class="el-now">' + STR.nowAt + EARR + ' <b>' + elevStr(cur.m) + '</b> \u00B7 ' + regName(reg) + '</div></div>' +
-      '<div class="el-prof" id="elProf">' + svg + '</div>' +
-      '<div class="el-legend">' +
-      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#cf7440"/></svg> ' + STR.here + '</span>' +
-      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#2c7a3d" stroke-width="1.6"/></svg> ' + STR.legPass + '</span>' +
-      '<span><svg width="12" height="12"><path d="M6 1 L11 11 L1 11 Z" fill="#cf7440"/></svg> ' + STR.legSide + '</span>' +
-      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="3" fill="#3e9a51"/></svg> ' + STR.legTown + '</span>' +
-      '<span>' + DARR + " " + STR.distWord + " \u00B7 " + EARR + " " + STR.altWord + '</span>' +
-      '<span>' + STR.legState + '</span>' +
-      '</div></div>';
+      var passes = "";
+      PASSES.forEach(function (p) {
+        var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(pk.m);
+        var col = p.side ? "#cf7440" : "#2c7a3d", dash = p.side ? 'stroke-dasharray="3 2"' : "";
+        var labelX;
+        if (p.lox != null) {
+          var lx2 = px + p.lox;
+          passes += '<line x1="' + lx2 + '" y1="' + (p.ly + 4) + '" x2="' + px + '" y2="' + (p.ly + 4) + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
+          passes += '<line x1="' + px + '" y1="' + (p.ly + 4) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
+          labelX = lx2;
+        } else {
+          passes += '<line x1="' + px + '" y1="' + (p.ly + 3) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
+          labelX = px + (p.dx || 0);
+        }
+        passes += '<circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
+        passes += '<text x="' + labelX + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
+      });
 
-    var prof = container.querySelector("#elProf");
-    var chip = document.createElement("div");
-    chip.className = "el-chip";
-    chip.innerHTML = DARR + ' <span class="k">' + distStr(cur.km * (NOMINAL / TOTAL)) + '</span> \u00B7 ' + EARR + ' <span class="k">' + elevStr(cur.m) + '</span>';
-    prof.appendChild(chip);
+      var marker = markerInView
+        ? ('<line x1="' + markX + '" y1="' + markY + '" x2="' + markX + '" y2="' + (bY + bH) + '" stroke="#cf7440" stroke-width="1.6" stroke-dasharray="4 3"/>' +
+           '<circle cx="' + markX + '" cy="' + markY + '" r="10" fill="none" stroke="#cf7440" stroke-width="1.6" opacity=".4"/>' +
+           '<circle cx="' + markX + '" cy="' + markY + '" r="6.5" fill="#cf7440"/><circle cx="' + markX + '" cy="' + markY + '" r="2.4" fill="#fff"/>')
+        : "";
 
-    var pop = document.createElement("div");
-    pop.className = "el-townpop";
-    prof.appendChild(pop);
-    function svgRect() { var s = prof.querySelector("svg"); return s ? s.getBoundingClientRect() : null; }
-    function place() {
-      var r = svgRect(); if (!r) return;
-      chip.style.left = (markX * r.width / W) + "px";
-      chip.style.top = (markY * r.height / H - 26) + "px";
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="PCT elevation profile">' +
+        '<defs><clipPath id="elWalked">' + walkedClip + '</clipPath>' +
+        '<clipPath id="plotClip"><rect x="' + PADL + '" y="0" width="' + (W - PADL - PADR) + '" height="' + H + '"/></clipPath>' +
+        '<linearGradient id="elG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fae62" stop-opacity=".9"/><stop offset="1" stop-color="#4fae62" stop-opacity=".35"/></linearGradient></defs>' +
+        grid +
+        '<g clip-path="url(#plotClip)">' +
+        '<path d="' + area + '" fill="#9db8a4" opacity=".26"/>' +
+        '<path d="' + area + '" clip-path="url(#elWalked)" fill="url(#elG)"/>' +
+        '<path d="' + line + '" fill="none" stroke="#2f7a3e" stroke-width="1.4" opacity=".7"/>' +
+        passes + towns + bands + land + marker +
+        '</g>' +
+        '</svg>';
+
+      container.innerHTML =
+        '<div class="el-card"><div class="el-head"><h2>' + STR.climb + '</h2>' +
+        '<div class="el-now">' + STR.nowAt + EARR + ' <b>' + elevStr(cur.m) + '</b> \u00B7 ' + regName(reg) + '</div></div>' +
+        '<div class="el-prof" id="elProf">' +
+        (full ? '' : '<button class="el-back" type="button">\u2039 ' + (DE ? "\u00dcbersicht" : "Overview") + '</button>') +
+        svg + '</div>' +
+        '<div class="el-legend">' +
+        '<span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#cf7440"/></svg> ' + STR.here + '</span>' +
+        '<span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#2c7a3d" stroke-width="1.6"/></svg> ' + STR.legPass + '</span>' +
+        '<span><svg width="12" height="12"><path d="M6 1 L11 11 L1 11 Z" fill="#cf7440"/></svg> ' + STR.legSide + '</span>' +
+        '<span><svg width="12" height="12"><circle cx="6" cy="6" r="3" fill="#3e9a51"/></svg> ' + STR.legTown + '</span>' +
+        '<span>' + DARR + " " + STR.distWord + " \u00B7 " + EARR + " " + STR.altWord + '</span>' +
+        '<span>' + STR.legState + '</span>' +
+        '<span>\u2921 ' + STR.zoomHint + '</span>' +
+        '</div></div>';
+
+      var prof = container.querySelector("#elProf");
+      if (markerInView) {
+        var chip = document.createElement("div");
+        chip.className = "el-chip";
+        chip.innerHTML = DARR + ' <span class="k">' + distStr(cur.km * (NOMINAL / TOTAL)) + '</span> \u00B7 ' + EARR + ' <span class="k">' + elevStr(cur.m) + '</span>';
+        prof.appendChild(chip);
+        var placeChip = function () { var s2 = prof.querySelector("svg"); if (!s2) return; var r = s2.getBoundingClientRect(); chip.style.left = (markX * r.width / W) + "px"; chip.style.top = (markY * r.height / H - 26) + "px"; };
+        placeChip();
+        prof._placeChip = placeChip;
+      } else { prof._placeChip = null; }
+
+      var pop = document.createElement("div");
+      pop.className = "el-townpop";
+      prof.appendChild(pop);
+      function svgRect() { var s2 = prof.querySelector("svg"); return s2 ? s2.getBoundingClientRect() : null; }
+      prof.addEventListener("mouseover", function (e) {
+        var t = e.target;
+        if (t && t.classList && t.classList.contains("el-townhit")) {
+          var d = townData[+t.getAttribute("data-i")]; if (!d) return;
+          var r = svgRect(); if (!r) return;
+          pop.innerHTML = d.name + "<small>" + STR.resupply + " \u00B7 " + distStr(d.km * (NOMINAL / TOTAL)) + "</small>";
+          pop.style.left = (d.tx * r.width / W) + "px";
+          pop.style.top = ((baseY - 12) * r.height / H) + "px";
+          pop.classList.add("show");
+        }
+      });
+      prof.addEventListener("mouseout", function (e) {
+        var t = e.target;
+        if (t && t.classList && t.classList.contains("el-townhit")) pop.classList.remove("show");
+      });
+      [].slice.call(prof.querySelectorAll(".el-band")).forEach(function (b) {
+        b.addEventListener("click", function () {
+          var r = REGIONS[+b.getAttribute("data-r")];
+          var ov = (r.b - r.a) * F * 0.05;
+          viewA = Math.max(0, r.a * F - ov); viewB = Math.min(TOTAL, r.b * F + ov);
+          draw();
+        });
+      });
+      var back = prof.querySelector(".el-back");
+      if (back) back.addEventListener("click", function () { viewA = 0; viewB = TOTAL; draw(); });
     }
-    prof.addEventListener("mouseover", function (e) {
-      var t = e.target;
-      if (t && t.classList && t.classList.contains("el-townhit")) {
-        var d = townData[+t.getAttribute("data-i")]; if (!d) return;
-        var r = svgRect(); if (!r) return;
-        pop.innerHTML = d.name + "<small>" + STR.resupply + " \u00B7 " + distStr(d.km * (NOMINAL / TOTAL)) + "</small>";
-        pop.style.left = (d.tx * r.width / W) + "px";
-        pop.style.top = ((baseY - 12) * r.height / H) + "px";
-        pop.classList.add("show");
-      }
+
+    draw();
+    window.addEventListener("resize", function () {
+      var prof = container.querySelector("#elProf");
+      if (prof && prof._placeChip) prof._placeChip();
     });
-    prof.addEventListener("mouseout", function (e) {
-      var t = e.target;
-      if (t && t.classList && t.classList.contains("el-townhit")) pop.classList.remove("show");
-    });
-    place();
-    window.addEventListener("resize", place);
   }
 
   function init() {
