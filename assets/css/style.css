@@ -86,3 +86,56 @@ a:hover{ text-decoration:underline; }
 .update-date{ font-family:'Fraunces',Georgia,serif; font-size:18px; font-weight:600; color:var(--text); margin-bottom:6px; }
 .update-text{ color:#3f463c; line-height:1.5; }
 .update-note{ margin-top:6px; color:var(--muted); font-style:italic; }
+
+/* ---- Home hero (self-configuring) ---- */
+.home-hero{ display:grid; grid-template-columns:1.05fr .95fr; gap:30px; align-items:center; margin:6px 0 20px; }
+@media (max-width:860px){ .home-hero{ grid-template-columns:1fr; } }
+.livepill{ display:inline-flex; align-items:center; gap:9px; font-size:13px; font-weight:700; color:var(--accent-d); background:rgba(62,154,81,.10); border:1px solid rgba(62,154,81,.24); padding:7px 14px; border-radius:999px; }
+.beat{ width:9px; height:9px; border-radius:50%; background:var(--accent); position:relative; flex:none; }
+.beat::after{ content:""; position:absolute; inset:-5px; border-radius:50%; border:2px solid var(--accent); opacity:.5; animation:heroBeat 2.4s ease-out infinite; }
+@keyframes heroBeat{ 0%{transform:scale(.5);opacity:.6} 100%{transform:scale(1.9);opacity:0} }
+.home-hero h1{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:clamp(34px,5.3vw,56px); line-height:1.03; letter-spacing:-.02em; margin:16px 0 0; }
+.home-hero h1 em{ font-style:italic; color:var(--accent-d); }
+.home-hero .sub{ margin-top:16px; font-size:16.5px; color:#48503f; max-width:52ch; line-height:1.55; }
+.home-hero .sub b{ color:var(--text); font-weight:600; }
+.qstats{ display:flex; flex-wrap:wrap; gap:30px; margin-top:22px; padding-top:20px; border-top:1px solid var(--line); }
+.qstat .n{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:30px; line-height:1; }
+.qstat .n small{ font-size:.5em; color:var(--muted); font-weight:600; font-family:'Inter'; margin-left:2px; }
+.qstat .l{ font-size:12.5px; color:var(--muted); margin-top:6px; }
+
+/* hero map */
+.hero-map{ position:relative; border-radius:24px; overflow:hidden; border:1px solid var(--line); box-shadow:var(--shadow); min-height:320px; background:#eef4ec; }
+.hero-map #map{ position:absolute; inset:0; height:100%; min-height:0; border:0; border-radius:0; box-shadow:none; }
+.hero-map .mapbadge{ position:absolute; left:16px; top:15px; z-index:5; display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:.04em; color:var(--accent-d); background:rgba(255,255,255,.9); padding:6px 11px; border-radius:999px; backdrop-filter:blur(4px); }
+.hero-map .mapcallout{ position:absolute; left:16px; right:16px; bottom:16px; z-index:5; background:rgba(255,255,255,.95); border:1px solid var(--line); border-radius:16px; padding:13px 15px; backdrop-filter:blur(6px); box-shadow:0 8px 24px rgba(20,32,28,.10); }
+.hero-map .mapcallout .place{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:19px; line-height:1.1; }
+.hero-map .mapcallout .meta{ font-size:12.5px; color:var(--muted); margin-top:3px; }
+.hero-map .mapcallout .meta b{ color:#cf7440; font-weight:700; }
+
+/* progress bar */
+.progress-card .ptop{ display:flex; justify-content:space-between; align-items:baseline; font-size:13px; color:var(--muted); margin-bottom:8px; }
+.progress-card .ptop b{ font-family:'Fraunces',Georgia,serif; font-size:20px; color:var(--text); font-weight:600; }
+.ptrack{ height:14px; border-radius:999px; background:#edeee6; overflow:hidden; }
+.pfill{ height:100%; border-radius:999px; background:linear-gradient(90deg,var(--accent),#5cb56d); transition:width .3s ease; width:0%; }
+
+/* status badge (light) */
+.status-badge{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:650; color:#2c7a3d; background:rgba(62,154,81,.12); border:1px solid rgba(62,154,81,.24); white-space:nowrap; }
+.status-dot{ width:9px; height:9px; border-radius:999px; background:var(--accent); }
+
+/* hidden telemetry feeders (map.js needs these present) */
+.tele-hidden{ position:absolute !important; width:1px !important; height:1px !important; min-height:0 !important; overflow:hidden; clip:rect(0 0 0 0); opacity:0; pointer-events:none; border:0 !important; }
+
+/* ---- Light-theme overrides for map.js telemetry (stats + insights) ---- */
+#statsList, #insightsList{ color:#26312a; }
+#statsList *, #insightsList *{ color:#26312a !important; }
+#statsList .label, #insightsList .label,
+#insightsList .pct-day-meta, #insightsList .pct-day-date,
+#insightsList .pct-row span, #insightsList .pct-section-title span{ color:#6c7365 !important; }
+#statsList .pct-stat-hero, #statsList .pct-chip,
+#insightsList .pct-section, #insightsList .pct-stat-hero, #insightsList .pct-chip{
+  background:#faf9f4 !important; border-color:#e8e6da !important;
+}
+#insightsList .pct-progressbar{ background:#edeee6 !important; border-color:#e0e1d8 !important; }
+#insightsList .pct-progressfill{ background:linear-gradient(90deg,#3e9a51,#5cb56d) !important; }
+#insightsList div[style*="255,255,255,.18"]{ background:#dfe1d6 !important; }
+#insightsList div[style*="70,243,255"]{ background:linear-gradient(180deg,#4fae62,#8fce9c) !important; }
