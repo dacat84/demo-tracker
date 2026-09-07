@@ -34,8 +34,9 @@ body_extra: |
 <div id="elevation"></div>
 
 <div class="card progress-card" style="margin-top:12px">
-  <div class="ptop"><span data-en="Mexico (Campo) → Canada (Northern Terminus)" data-de="Mexiko (Campo) → Kanada (Northern Terminus)">Mexico (Campo) → Canada (Northern Terminus)</span><span><b id="pPct">&mdash;%</b> &middot; <span id="pRem">&mdash; km</span> <span data-en="to go" data-de="verbleibend">to go</span></span></div>
+  <div class="ptop"><span data-en="Progress" data-de="Fortschritt">Progress</span><span><b id="pPct">&mdash;%</b> &middot; <b id="pDone">&mdash; km</b> <span data-en="of" data-de="von">of</span> <span id="pTotal">&mdash; km</span></span></div>
   <div class="ptrack"><div class="pfill" id="pFill"></div></div>
+  <div class="pends" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:9px;font-size:12px;color:#6c7365"><span data-en="Mexico (Campo)" data-de="Mexiko (Campo)">Mexico (Campo)</span><span style="font-weight:600;color:#2c7a3d"><span id="pRem">&mdash; km</span> <span data-en="to go" data-de="verbleibend">to go</span></span><span style="text-align:right" data-en="Canada (Northern Terminus)" data-de="Kanada (Northern Terminus)">Canada (Northern Terminus)</span></div>
 </div>
 
 <div class="mapbackdrop" id="mapBackdrop"></div>

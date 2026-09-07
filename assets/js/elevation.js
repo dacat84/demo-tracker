@@ -19,14 +19,14 @@
   var STR = DE ? {
     liveDay: "Tag", inThe: "Ich bin gerade in ", rightNow: ".",
     fromCampo: " ab Campo", nearestWp: " \u00B7 n\u00e4chster Wegpunkt ", stillPre: "noch ", toEnd: " bis zum Northern Terminus.",
-    climb: "H\u00f6henprofil PCT", nowAt: "Aktuell ",
+    climb: "H\u00f6henprofil <b>P</b>acific <b>C</b>rest <b>T</b>rail", nowAt: "Aktuell ",
     here: "Standort", legPass: "Pass / Gipfel", legSide: "Abstecher", legTown: "Versorgungsort",
     legState: "Voll = getrackt \u00B7 blass = noch nicht", near: "Nahe ",
     distWord: "Distanz", altWord: "H\u00f6he", resupply: "Versorgungsort"
   } : {
     liveDay: "Day", inThe: "I'm in the ", rightNow: " right now.",
     fromCampo: " from Campo", nearestWp: " \u00B7 nearest waypoint ", stillPre: "", toEnd: " still to the Northern Terminus.",
-    climb: "PCT elevation profile", nowAt: "Now at ",
+    climb: "<b>P</b>acific <b>C</b>rest <b>T</b>rail elevation profile", nowAt: "Now at ",
     here: "You are here", legPass: "Pass / peak", legSide: "Side trip", legTown: "Resupply town",
     legState: "Solid = tracked \u00B7 faded = not yet", near: "Near ",
     distWord: "distance", altWord: "elevation", resupply: "Resupply"
@@ -62,6 +62,8 @@
     { km: 290, n: "San Jacinto", t: "mark" },
     { km: 870, n: "Mojave Desert", t: "desert" },
     { km: 1130, n: "Kennedy Meadows", t: "mark" },
+    { km: 1240, n: "Sequoia NP", t: "park" },
+    { km: 1360, n: "Kings Canyon NP", t: "park" },
     { km: 1500, n: "Yosemite NP", t: "park" },
     { km: 1950, n: "Lake Tahoe", t: "mark" },
     { km: 2350, n: "Lassen Volcanic NP", t: "park" },
@@ -95,7 +97,7 @@
     s.textContent =
       ".el-card{background:#fff;border:1px solid #e8e6da;border-radius:22px;padding:20px 20px 12px;box-shadow:0 1px 2px rgba(20,32,28,.04),0 14px 40px rgba(20,32,28,.06);color:#1e241c}" +
       ".el-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:4px}" +
-      ".el-head h2{margin:0;font:600 21px/1.1 'Fraunces',Georgia,serif;letter-spacing:-.01em}" +
+      ".el-head h2{margin:0;font:600 21px/1.1 'Fraunces',Georgia,serif;letter-spacing:-.01em}.el-head h2 b{font-weight:800}" +
       ".el-now{font-size:13px;color:#6c7365}.el-now b{color:#1e241c}" +
       ".el-prof{position:relative}.el-prof svg{display:block;width:100%;height:auto;overflow:visible}" +
       ".el-town{pointer-events:none}.el-townhit{fill:transparent;cursor:pointer}" +
@@ -186,6 +188,8 @@
     setText("heroPct", pct);
     setText("pPct", pct + "%");
     setText("pRem", distStr(toGo));
+    setText("pDone", distStr(CUR.km));
+    setText("pTotal", distStr(TOTAL_KM));
     var pf = document.getElementById("pFill"); if (pf) pf.style.width = pct + "%";
     setHTML("mPlace", regName(reg) + ", " + reg.st);
     setHTML("mMeta", STR.near + near + " \u00B7 " + DARR + " <b>" + distStr(CUR.km) + "</b> \u00B7 " + EARR + " <b>" + elevStr(CUR.m) + "</b>");
@@ -288,7 +292,7 @@
         ? '<circle cx="' + lx + '" cy="' + lY + '" r="2.6" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '"/>'
         : '<rect x="' + (lx - 2) + '" y="' + (lY - 2) + '" width="4" height="4" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '" transform="rotate(45 ' + lx + ' ' + lY + ')"/>';
       var edge = lx > W - 95;
-      land += '<text x="' + (edge ? (lx - 4) : (lx + 4)) + '" y="' + (lY + 5) + '" text-anchor="' + (edge ? 'end' : 'start') + '" transform="rotate(26 ' + lx + ' ' + lY + ')" font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
+      land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (lY + 5) + '" text-anchor="' + (edge ? 'middle' : 'start') + '" transform="rotate(26 ' + lx + ' ' + lY + ')" font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
     });
 
     var townData = [];
