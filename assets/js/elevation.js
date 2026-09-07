@@ -47,15 +47,17 @@
   ];
   var PASSES = [
     { km: 290, n: "San Jacinto", ly: 12, anc: "middle", dx: 0 },
+    { km: 393, n: "San Gorgonio", ly: 40, anc: "middle", dx: 0 },
     { km: 610, n: "Mt. Baden-Powell", side: true, ly: 26, anc: "middle", dx: 0 },
     { km: 1235, n: "Mt. Whitney", side: true, ly: 50, anc: "middle", lox: -46 },
     { km: 1300, n: "Forester Pass", ly: 40, anc: "middle", dx: 0 },
     { km: 1430, n: "Muir Pass", ly: 12, anc: "middle", dx: 0 },
     { km: 1490, n: "Half Dome", side: true, ly: 26, anc: "start", dx: 5 },
+    { km: 1620, n: "Leavitt Peak", ly: 68, anc: "middle", dx: 0 },
     { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0 },
     { km: 1885, n: "Tahoe Rim", side: true, ly: 54, anc: "middle", dx: 0 }
   ];
-  var TOWNS = [[68,"Mt Laguna"],[124,"Julian"],[175,"Warner Springs"],[290,"Idyllwild"],[435,"Big Bear"],[605,"Wrightwood"],[730,"Agua Dulce"],[832,"Hikertown"],[915,"Tehachapi"],[1128,"Kennedy Mdws"],[1230,"Lone Pine"],[1290,"Bishop"],[1400,"VVR"],[1450,"Mammoth"],[1510,"Tuolumne"],[1690,"Bridgeport"],[1885,"S Lake Tahoe"],[2020,"Sierra City"],[2130,"Belden"],[2200,"Chester"],[2330,"Burney"],[2510,"Mt Shasta"],[2670,"Etna"],[2760,"Seiad Valley"],[2870,"Ashland"],[2985,"Mazama"],[3230,"Sisters"],[3430,"Timberline"],[3540,"Cascade Locks"],[3620,"Trout Lake"],[3760,"White Pass"],[3870,"Snoqualmie"],[3990,"Stevens Pass"],[4165,"Stehekin"]];
+  var TOWNS = [[68,"Mt Laguna"],[124,"Julian"],[175,"Warner Springs"],[290,"Idyllwild"],[435,"Big Bear"],[605,"Wrightwood"],[730,"Agua Dulce"],[832,"Hikertown"],[915,"Tehachapi"],[1050,"Lake Isabella"],[1128,"Kennedy Mdws"],[1230,"Lone Pine"],[1290,"Bishop"],[1400,"VVR"],[1450,"Mammoth"],[1510,"Tuolumne"],[1690,"Bridgeport"],[1885,"S Lake Tahoe"],[2020,"Sierra City"],[2130,"Belden"],[2200,"Chester"],[2330,"Burney"],[2510,"Mt Shasta"],[2670,"Etna"],[2760,"Seiad Valley"],[2870,"Ashland"],[2985,"Mazama"],[3230,"Sisters"],[3430,"Timberline"],[3540,"Cascade Locks"],[3620,"Trout Lake"],[3760,"White Pass"],[3870,"Snoqualmie"],[3990,"Stevens Pass"],[4165,"Stehekin"]];
   var LAND = [
     { km: 290, n: "San Jacinto", t: "mark" },
     { km: 870, n: "Mojave Desert", t: "desert" },
@@ -285,7 +287,8 @@
       land += m.t === "park"
         ? '<circle cx="' + lx + '" cy="' + lY + '" r="2.6" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '"/>'
         : '<rect x="' + (lx - 2) + '" y="' + (lY - 2) + '" width="4" height="4" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '" transform="rotate(45 ' + lx + ' ' + lY + ')"/>';
-      land += '<text x="' + (lx + 4) + '" y="' + (lY + 5) + '" transform="rotate(26 ' + lx + ' ' + lY + ')" font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
+      var edge = lx > W - 95;
+      land += '<text x="' + (edge ? (lx - 4) : (lx + 4)) + '" y="' + (lY + 5) + '" text-anchor="' + (edge ? 'end' : 'start') + '" transform="rotate(26 ' + lx + ' ' + lY + ')" font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
     });
 
     var townData = [];
@@ -331,7 +334,7 @@
 
     container.innerHTML =
       '<div class="el-card"><div class="el-head"><h2>' + STR.climb + '</h2>' +
-      '<div class="el-now">' + STR.nowAt + '<b>' + elevStr(cur.m) + '</b> \u00B7 ' + regName(reg) + '</div></div>' +
+      '<div class="el-now">' + STR.nowAt + EARR + ' <b>' + elevStr(cur.m) + '</b> \u00B7 ' + regName(reg) + '</div></div>' +
       '<div class="el-prof" id="elProf">' + svg + '</div>' +
       '<div class="el-legend">' +
       '<span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#cf7440"/></svg> ' + STR.here + '</span>' +
