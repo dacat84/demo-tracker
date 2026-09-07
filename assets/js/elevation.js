@@ -21,14 +21,14 @@
   var STR = DE ? {
     liveDay: "Tag", inThe: "Ich bin gerade in ", rightNow: ".",
     fromCampo: " ab Campo", nearestWp: " \u00B7 n\u00e4chster Wegpunkt ", stillPre: "noch ", toEnd: " bis zum Northern Terminus.",
-    climb: "H\u00f6henprofil, Anfang bis Ende", nowAt: "Aktuell ",
+    climb: "Jedes Auf und Ab", nowAt: "Aktuell ",
     here: "Standort", legPass: "Pass / Gipfel", legSide: "Abstecher", legTown: "Versorgungsort",
     legState: "Voll = gelaufen \u00B7 blass = noch vor mir", near: "Nahe ",
     distWord: "Distanz", altWord: "H\u00f6he", resupply: "Versorgungsort"
   } : {
     liveDay: "Day", inThe: "I'm in the ", rightNow: " right now.",
     fromCampo: " from Campo", nearestWp: " \u00B7 nearest waypoint ", stillPre: "", toEnd: " still to the Northern Terminus.",
-    climb: "The climb, end to end", nowAt: "Now at ",
+    climb: "Every up and down", nowAt: "Now at ",
     here: "You are here", legPass: "Pass / peak", legSide: "Side trip", legTown: "Resupply town",
     legState: "Solid = walked \u00B7 faded = ahead", near: "Near ",
     distWord: "distance", altWord: "elevation", resupply: "Resupply"
@@ -54,7 +54,8 @@
     { km: 1300, n: "Forester Pass", ly: 40, anc: "end", dx: -5 },
     { km: 1430, n: "Muir Pass", ly: 12, anc: "start", dx: 5 },
     { km: 1490, n: "Half Dome", side: true, ly: 26, anc: "start", dx: 5 },
-    { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0 }
+    { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0 },
+    { km: 1885, n: "Tahoe Rim Trail", side: true, ly: 12, anc: "middle", dx: 0 }
   ];
   var TOWNS = [[68,"Mt Laguna"],[175,"Warner Springs"],[290,"Idyllwild"],[435,"Big Bear"],[605,"Wrightwood"],[730,"Agua Dulce"],[915,"Tehachapi"],[1128,"Kennedy Mdws"],[1230,"Lone Pine"],[1290,"Bishop"],[1400,"VVR"],[1450,"Mammoth"],[1510,"Tuolumne"],[1690,"Bridgeport"],[1885,"S Lake Tahoe"],[2020,"Sierra City"],[2130,"Belden"],[2200,"Chester"],[2330,"Burney"],[2510,"Mt Shasta"],[2670,"Etna"],[2760,"Seiad Valley"],[2870,"Ashland"],[2985,"Mazama"],[3230,"Sisters"],[3430,"Timberline"],[3540,"Cascade Locks"],[3620,"Trout Lake"],[3760,"White Pass"],[3870,"Snoqualmie"],[3990,"Stevens Pass"],[4165,"Stehekin"]];
   var LAND = [
@@ -98,9 +99,9 @@
       ".el-now{font-size:13px;color:#6c7365}.el-now b{color:#1e241c}" +
       ".el-prof{position:relative}.el-prof svg{display:block;width:100%;height:auto;overflow:visible}" +
       ".el-town{pointer-events:none}.el-townhit{fill:transparent;cursor:pointer}" +
-      ".el-chip{position:absolute;transform:translate(-50%,-100%);background:#1e241c;color:#fff;border-radius:10px;padding:7px 11px;font:12px/1.35 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.22);pointer-events:none}" +
+      ".el-chip{position:absolute;transform:translate(-50%,-100%);background:rgba(30,36,28,.80);color:#fff;border-radius:10px;padding:6px 10px;font:12px/1.3 Inter,system-ui,sans-serif;white-space:nowrap;backdrop-filter:blur(2px);box-shadow:0 6px 18px rgba(0,0,0,.18);pointer-events:none}" +
       ".el-chip b{font-weight:700}.el-chip .k{color:#f0b48a}" +
-      ".el-chip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1e241c}" +
+      ".el-chip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:rgba(30,36,28,.80)}" +
       ".el-townpop{position:absolute;transform:translate(-50%,-100%);background:#1e241c;color:#fff;border-radius:9px;padding:6px 11px;font:600 12.5px/1.2 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 10px 26px rgba(0,0,0,.28);pointer-events:none;opacity:0;transition:opacity .12s ease;z-index:4}" +
       ".el-townpop small{display:block;font-weight:500;font-size:10.5px;color:#9fe0ae;margin-top:1px}" +
       ".el-townpop.show{opacity:1}" +
@@ -298,7 +299,7 @@
     var prof = container.querySelector("#elProf");
     var chip = document.createElement("div");
     chip.className = "el-chip";
-    chip.innerHTML = '<b>' + STR.here + '</b><br>' + DARR + ' <span class="k">' + distStr(cur.km) + '</span> \u00B7 ' + EARR + ' <span class="k">' + elevStr(cur.m) + '</span>';
+    chip.innerHTML = DARR + ' <span class="k">' + distStr(cur.km) + '</span> \u00B7 ' + EARR + ' <span class="k">' + elevStr(cur.m) + '</span>';
     prof.appendChild(chip);
 
     var pop = document.createElement("div");

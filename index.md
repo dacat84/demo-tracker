@@ -34,7 +34,7 @@ body_extra: |
 <div id="elevation"></div>
 
 <div class="card progress-card" style="margin-top:12px">
-  <div class="ptop"><span>Campo &rarr; Northern Terminus</span><span><b id="pPct">&mdash;%</b> &middot; <span id="pRem">&mdash; km</span> <span data-en="to go" data-de="verbleibend">to go</span></span></div>
+  <div class="ptop"><span data-en="Mexico (Campo) → Canada (Northern Terminus)" data-de="Mexiko (Campo) → Kanada (Northern Terminus)">Mexico (Campo) → Canada (Northern Terminus)</span><span><b id="pPct">&mdash;%</b> &middot; <span id="pRem">&mdash; km</span> <span data-en="to go" data-de="verbleibend">to go</span></span></div>
   <div class="ptrack"><div class="pfill" id="pFill"></div></div>
 </div>
 
