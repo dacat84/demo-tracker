@@ -1,22 +1,24 @@
-/* PCT elevation profile
-   Reads data/pct_profile.json (km + m + lat/lon per point) and data/latest.json
-   (live GPS position) and renders the end-to-end climb: regions, passes, side
-   trips, resupply towns, national parks and the live "you are here" marker.
-   Curated annotations are keyed to a nominal 4265 km trail and scaled onto the
-   real measured length. Passes snap to the local peak of the real curve so they
-   sit on summits, not in valleys. */
+/* PCT elevation profile + self-configuring home hero
+   Reads data/pct_profile.json (km + m + lat/lon) and data/latest.json (live GPS).
+   Renders the end-to-end climb (regions, passes, side trips, resupply towns,
+   national parks, live marker) and — when the matching elements exist — fills the
+   home hero (headline, sub, quick stats), the map callout and the progress bar.
+   Resupply-town labels enlarge on hover. Curated annotations are keyed to a
+   nominal 4265 km trail and scaled onto the real measured length; passes snap to
+   the local peak so they sit on summits. avg/day and days-out are read from the
+   stats map.js renders (no map.js changes needed). */
 (function () {
   "use strict";
   var BASE = "/pct-tracker/";
   var NOMINAL = 4265;
 
   var REGIONS = [
-    { name: "Southern California", a: 0, b: 1100, c: "#e0a06a" },
-    { name: "Southern Sierra", a: 1100, b: 1800, c: "#9dbf78" },
-    { name: "Northern Sierra", a: 1800, b: 2150, c: "#7fb08a" },
-    { name: "NorCal / C. Oregon", a: 2150, b: 2850, c: "#6fae9e" },
-    { name: "Central Cascades", a: 2850, b: 3600, c: "#8aa4c0" },
-    { name: "North Cascades", a: 3600, b: 4265, c: "#b39ac8" }
+    { name: "Southern California", a: 0, b: 1100, c: "#e0a06a", st: "CA" },
+    { name: "Southern Sierra", a: 1100, b: 1800, c: "#9dbf78", st: "CA" },
+    { name: "Northern Sierra", a: 1800, b: 2150, c: "#7fb08a", st: "CA" },
+    { name: "NorCal / C. Oregon", a: 2150, b: 2850, c: "#6fae9e", st: "OR" },
+    { name: "Central Cascades", a: 2850, b: 3600, c: "#8aa4c0", st: "OR" },
+    { name: "North Cascades", a: 3600, b: 4265, c: "#b39ac8", st: "WA" }
   ];
   var PASSES = [
     { km: 290, n: "San Jacinto", ly: 12, anc: "middle", dx: 0 },
@@ -39,15 +41,17 @@
     { km: 3450, n: "Mt. Hood", t: "mark" },
     { km: 4050, n: "North Cascades NP", t: "park" }
   ];
+  var WAY = TOWNS.concat([[0, "Campo"], [1300, "Forester Pass"], [1700, "Sonora Pass"], [4265, "Manning Park"]]);
 
   function haversine(la1, lo1, la2, lo2) {
     var R = 6371.0088, p1 = la1 * Math.PI / 180, p2 = la2 * Math.PI / 180;
     var dp = (la2 - la1) * Math.PI / 180, dl = (lo2 - lo1) * Math.PI / 180;
-    var h = Math.sin(dp / 2) * Math.sin(dp / 2) +
-            Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+    var h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
     return 2 * R * Math.asin(Math.sqrt(h));
   }
   function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function setHTML(id, html) { var e = document.getElementById(id); if (e) e.innerHTML = html; }
+  function setText(id, t) { var e = document.getElementById(id); if (e) e.textContent = t; }
 
   function injectCSS() {
     if (document.getElementById("elCSS")) return;
@@ -56,9 +60,11 @@
     s.textContent =
       ".el-card{background:#fff;border:1px solid #e8e6da;border-radius:22px;padding:20px 20px 12px;box-shadow:0 1px 2px rgba(20,32,28,.04),0 14px 40px rgba(20,32,28,.06);color:#1e241c}" +
       ".el-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:4px}" +
-      ".el-head h2{margin:0;font:600 21px/1.1 Georgia,serif;letter-spacing:-.01em}" +
+      ".el-head h2{margin:0;font:600 21px/1.1 'Fraunces',Georgia,serif;letter-spacing:-.01em}" +
       ".el-now{font-size:13px;color:#6c7365}.el-now b{color:#1e241c}" +
       ".el-prof{position:relative}.el-prof svg{display:block;width:100%;height:auto;overflow:visible}" +
+      ".el-town{transition:font-size .1s ease,fill .1s ease}" +
+      ".el-town:hover{font-size:11.5px;font-weight:700;fill:#1e241c}" +
       ".el-chip{position:absolute;transform:translate(-50%,-100%);background:#1e241c;color:#fff;border-radius:10px;padding:7px 11px;font:12px/1.35 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.22);pointer-events:none}" +
       ".el-chip b{font-weight:700}.el-chip .k{color:#f0b48a}" +
       ".el-chip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1e241c}" +
@@ -75,8 +81,58 @@
     return { km: bk, m: bm };
   }
 
+  var CUR = null, TOTAL_KM = NOMINAL;
+
+  function nearestWaypoint(km, F) {
+    var best = "the trail", bd = 1e18;
+    for (var i = 0; i < WAY.length; i++) {
+      var d = Math.abs(WAY[i][0] * F - km);
+      if (d < bd) { bd = d; best = WAY[i][1]; }
+    }
+    return best;
+  }
+
+  function fillHero(reg, F) {
+    if (!CUR) return;
+    var toGo = Math.max(0, TOTAL_KM - CUR.km);
+    var pct = Math.round((CUR.km / TOTAL_KM) * 100);
+    var near = nearestWaypoint(CUR.km, F);
+    setHTML("heroTitle", "I'm in the <em>" + reg.name + "</em> right now.");
+    setHTML("heroSub", "<b>" + fmt(CUR.km) + " km</b> from Campo &middot; nearest waypoint <b>" + near +
+      "</b> &middot; <b>" + fmt(toGo) + " km</b> still to Canada.");
+    setText("heroPct", pct);
+    setText("pPct", pct + "%");
+    setText("pRem", fmt(toGo) + " km");
+    var pf = document.getElementById("pFill"); if (pf) pf.style.width = pct + "%";
+    setHTML("mPlace", reg.name + ", " + reg.st);
+    setHTML("mMeta", "Near " + near + " &middot; <b>" + fmt(CUR.km) + " km</b> &middot; " + fmt(CUR.m) + " m");
+  }
+
+  function grabStats() {
+    var ins = document.getElementById("insightsList");
+    if (!ins || !CUR) return false;
+    var m = ins.textContent.match(/(\d+)\s*active days/);
+    if (!m) return false;
+    var days = parseInt(m[1], 10);
+    setText("heroDays", days);
+    setText("heroDay", "Day " + days);
+    if (days > 0) setText("heroAvg", (CUR.km / days).toFixed(1));
+    return true;
+  }
+
+  function watchStats() {
+    if (!document.getElementById("heroDays")) return;
+    if (grabStats()) return;
+    var ins = document.getElementById("insightsList");
+    if (!ins) return;
+    var obs = new MutationObserver(function () { if (grabStats()) obs.disconnect(); });
+    obs.observe(ins, { childList: true, subtree: true, characterData: true });
+    setTimeout(function () { if (grabStats()) obs.disconnect(); }, 4000);
+  }
+
   function render(container, data, latest) {
     var TOTAL = data.total_km;
+    TOTAL_KM = TOTAL;
     var pts = data.points;
     var S = pts.map(function (p) { return [p.km, p.m]; });
     var F = TOTAL / NOMINAL;
@@ -90,7 +146,13 @@
       }
       if (best) cur = { km: best.km, m: best.m };
     }
+    CUR = cur;
     var reg = REGIONS.find(function (r) { return cur.km >= r.a * F && cur.km < r.b * F; }) || REGIONS[REGIONS.length - 1];
+
+    fillHero(reg, F);
+    watchStats();
+
+    if (!container) return;
 
     var W = 1000, H = 310, PADL = 42, PADR = 10, PADT = 56, baseY = 200, maxM = 3900;
     function x(km) { return PADL + (km / TOTAL) * (W - PADL - PADR); }
@@ -131,7 +193,7 @@
     TOWNS.forEach(function (t) {
       var km = t[0] * F, tx = x(km), done = km <= cur.km, dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
       towns += '<circle cx="' + tx + '" cy="' + baseY + '" r="1.9" fill="' + dot + '"/>';
-      towns += '<text x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
+      towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
     });
 
     var passes = "";
@@ -139,7 +201,7 @@
       var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(pk.m);
       var col = p.side ? "#cf7440" : "#2c7a3d", dash = p.side ? 'stroke-dasharray="3 2"' : "";
       passes += '<line x1="' + px + '" y1="' + (p.ly + (p.sub ? 13 : 3)) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/><circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
-      passes += '<text x="' + (px + p.dx) + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
+      passes += '<text x="' + (px + p.dx) + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "▲ " : "") + p.n + '</text>';
       if (p.sub) passes += '<text x="' + (px + p.dx) + '" y="' + (p.ly + 10) + '" text-anchor="' + p.anc + '" font-size="8" font-family="Inter" fill="' + col + '" opacity=".72">' + p.sub + '</text>';
     });
 
@@ -187,7 +249,8 @@
 
   function init() {
     var container = document.getElementById("elevation");
-    if (!container) return;
+    var hero = document.getElementById("heroTitle");
+    if (!container && !hero) return;
     injectCSS();
     Promise.all([
       fetch(BASE + "data/pct_profile.json", { cache: "no-store" }).then(function (r) { return r.json(); }),
@@ -195,7 +258,7 @@
     ]).then(function (res) {
       render(container, res[0], res[1]);
     }).catch(function (e) {
-      container.innerHTML = '<div class="el-card">Could not load elevation profile.</div>';
+      if (container) container.innerHTML = '<div class="el-card">Could not load elevation profile.</div>';
       console.error(e);
     });
   }
