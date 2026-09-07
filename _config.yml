@@ -5,3 +5,7 @@ baseurl: "/pct-tracker"  # set to "/REPO_NAME" if needed
 markdown: kramdown
 theme: null
 permalink: pretty
+
+collections:
+  updates:
+    output: false
