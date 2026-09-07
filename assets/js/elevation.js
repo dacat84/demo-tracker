@@ -282,6 +282,7 @@
 
     function draw() {
       var full = viewA <= 0.5 && viewB >= TOTAL - 0.5;
+      var fs = full ? 1 : 1.45;
       function x(km) { return PADL + ((km - viewA) / (viewB - viewA)) * (W - PADL - PADR); }
       var markX = x(cur.km), markY = y(cur.m), markerInView = cur.km >= viewA && cur.km <= viewB;
 
@@ -303,7 +304,7 @@
       REGIONS.forEach(function (r, ri) {
         var rx = x(r.a * F), rw = x(r.b * F) - x(r.a * F), ahead = r.a * F >= cur.km;
         bands += '<rect class="el-band" data-r="' + ri + '" x="' + (rx + 1) + '" y="' + bY + '" width="' + (rw - 2) + '" height="' + bH + '" rx="5" fill="' + r.c + '" opacity="' + (ahead ? 0.34 : 0.9) + '"/>';
-        if (rw > 74) bands += '<text x="' + (rx + rw / 2) + '" y="' + (bY + bH / 2 + 3.5) + '" text-anchor="middle" font-size="10" font-family="Inter" font-weight="600" fill="#2c3327" opacity="' + (ahead ? 0.5 : 0.92) + '" pointer-events="none">' + regName(r) + '</text>';
+        if (rw > 74) bands += '<text x="' + (rx + rw / 2) + '" y="' + (bY + bH / 2 + 3.5) + '" text-anchor="middle" font-size="' + (10 * fs).toFixed(1) + '" font-family="Inter" font-weight="600" fill="#2c3327" opacity="' + (ahead ? 0.5 : 0.92) + '" pointer-events="none">' + regName(r) + '</text>';
       });
 
       var land = "";
@@ -317,7 +318,7 @@
           ? '<circle cx="' + lx + '" cy="' + lY + '" r="2.6" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '"/>'
           : '<rect x="' + (lx - 2) + '" y="' + (lY - 2) + '" width="4" height="4" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '" transform="rotate(45 ' + lx + ' ' + lY + ')"/>';
         var edge = lx > W - 95;
-        land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (edge ? (lY + 13) : (lY + 5)) + '" text-anchor="' + (edge ? 'middle' : 'start') + '"' + (edge ? '' : ' transform="rotate(26 ' + lx + ' ' + lY + ')"') + ' font-size="10.5" font-weight="600" font-family="Inter" fill="' + tcol + '" opacity="' + (done ? 1 : 0.72) + '">' + m.n + '</text>';
+        land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (edge ? (lY + 13) : (lY + 5)) + '" text-anchor="' + (edge ? 'middle' : 'start') + '"' + (edge ? '' : ' transform="rotate(26 ' + lx + ' ' + lY + ')"') + ' font-size="' + (10.5 * fs).toFixed(1) + '" font-weight="600" font-family="Inter" fill="' + tcol + '" opacity="' + (done ? 1 : 0.72) + '">' + m.n + '</text>';
       });
 
       var townData = [];
@@ -326,7 +327,7 @@
         var km = t[0] * F, tx = x(km), done = inWalked(km), dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
         townData.push({ tx: tx, name: t[2] || t[1], km: t[0] * F });
         towns += '<circle cx="' + tx + '" cy="' + baseY + '" r="1.9" fill="' + dot + '"/>';
-        towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
+        towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="' + (7.6 * fs).toFixed(1) + '" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
         towns += '<rect class="el-townhit" data-i="' + i + '" x="' + (tx - 6) + '" y="' + (baseY - 48) + '" width="12" height="54"/>';
       });
 
@@ -345,7 +346,7 @@
           labelX = px + (p.dx || 0);
         }
         passes += '<circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
-        passes += '<text x="' + labelX + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
+        passes += '<text x="' + labelX + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="' + (9.5 * fs).toFixed(1) + '" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
       });
 
       var marker = markerInView
