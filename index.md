@@ -87,6 +87,7 @@ head_extra: |
 body_extra: |
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="/pct-tracker/assets/js/map.js"></script>
+  <script src="/pct-tracker/assets/js/elevation.js"></script>
 ---
 
 <div class="hero">
@@ -108,6 +109,8 @@ body_extra: |
 </div>
 
 <div id="map" class="map"></div>
+
+<div id="elevation"></div>
 
 <div class="grid">
   <div class="card">
