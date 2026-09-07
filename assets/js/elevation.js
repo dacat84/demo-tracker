@@ -265,6 +265,13 @@
     if (!container) return;
 
     var W = 1000, H = 320, PADL = 46, PADR = 10, PADT = 56, baseY = 200, maxM = 4200;
+    // lift the sampled line at named passes to their true elevation so the profile meets the marker
+    PASSES.forEach(function (p) {
+      if (p.el == null) return;
+      var target = p.km * F, bi = 0, bd = 1e18;
+      for (var i = 0; i < S.length; i++) { var d = Math.abs(S[i][0] - target); if (d < bd) { bd = d; bi = i; } }
+      S[bi][1] = Math.max(S[bi][1], Math.min(p.el, maxM));
+    });
     function x(km) { return PADL + (km / TOTAL) * (W - PADL - PADR); }
     function y(m) { return PADT + (1 - m / maxM) * (baseY - PADT); }
     var markX = x(cur.km), markY = y(cur.m);
@@ -318,7 +325,7 @@
 
     var passes = "";
     PASSES.forEach(function (p) {
-      var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(Math.min(p.el != null ? p.el : pk.m, maxM));
+      var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(pk.m);
       var col = p.side ? "#cf7440" : "#2c7a3d", dash = p.side ? 'stroke-dasharray="3 2"' : "";
       var labelX;
       if (p.lox != null) {
