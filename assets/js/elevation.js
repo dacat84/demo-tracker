@@ -1,11 +1,9 @@
 /* PCT elevation profile + self-configuring home hero (DE/EN, metric/imperial).
-   Data: data/pct_profile.json (km + m + lat/lon) and data/latest.json (live GPS).
-   Language is read from localStorage 'pctLang' (falls back to browser language);
-   the header toggle stores it and reloads. DE -> km/m + "." thousands; EN -> mi/ft
-   + "," thousands. Renders the climb (regions, passes, side trips, resupply towns
-   with hover pop-ups, national parks, live marker), fills the hero, the map callout
-   and the progress bar, and wires the map-expand overlay. avg/day + days-out are
-   read from the stats map.js renders (map.js is untouched). */
+   Data: data/pct_profile.json (km + m + lat/lon), data/latest.json (live GPS),
+   data/track.geojson (tracked activities). Language from localStorage 'pctLang'.
+   Only the actually-tracked segments are drawn solid (projected from the GPS
+   activities); everything else stays faded, so skipped/closed sections show as
+   gaps. avg/day = tracked distance / active days (not position / days). */
 (function () {
   "use strict";
   var BASE = "/pct-tracker/";
@@ -15,22 +13,22 @@
   if (LANG !== "de" && LANG !== "en") LANG = ((navigator.language || "en").slice(0, 2) === "de") ? "de" : "en";
   var DE = LANG === "de";
   var LOC = DE ? "de-DE" : "en-US";
-  var DARR = "\u2192";   // distance
-  var EARR = "\u25B2";   // elevation
+  var DARR = "\u2192";
+  var EARR = "\u25B2";
 
   var STR = DE ? {
     liveDay: "Tag", inThe: "Ich bin gerade in ", rightNow: ".",
     fromCampo: " ab Campo", nearestWp: " \u00B7 n\u00e4chster Wegpunkt ", stillPre: "noch ", toEnd: " bis zum Northern Terminus.",
-    climb: "Jedes Auf und Ab", nowAt: "Aktuell ",
+    climb: "H\u00f6henprofil PCT", nowAt: "Aktuell ",
     here: "Standort", legPass: "Pass / Gipfel", legSide: "Abstecher", legTown: "Versorgungsort",
-    legState: "Voll = gelaufen \u00B7 blass = noch vor mir", near: "Nahe ",
+    legState: "Voll = getrackt \u00B7 blass = noch nicht", near: "Nahe ",
     distWord: "Distanz", altWord: "H\u00f6he", resupply: "Versorgungsort"
   } : {
     liveDay: "Day", inThe: "I'm in the ", rightNow: " right now.",
     fromCampo: " from Campo", nearestWp: " \u00B7 nearest waypoint ", stillPre: "", toEnd: " still to the Northern Terminus.",
-    climb: "Every up and down", nowAt: "Now at ",
+    climb: "PCT elevation profile", nowAt: "Now at ",
     here: "You are here", legPass: "Pass / peak", legSide: "Side trip", legTown: "Resupply town",
-    legState: "Solid = walked \u00B7 faded = ahead", near: "Near ",
+    legState: "Solid = tracked \u00B7 faded = not yet", near: "Near ",
     distWord: "distance", altWord: "elevation", resupply: "Resupply"
   };
   var REG_DE = {
@@ -50,12 +48,12 @@
   var PASSES = [
     { km: 290, n: "San Jacinto", ly: 12, anc: "middle", dx: 0 },
     { km: 610, n: "Mt. Baden-Powell", side: true, ly: 26, anc: "middle", dx: 0 },
-    { km: 1235, n: "Mt. Whitney", side: true, ly: 12, anc: "end", dx: -5 },
-    { km: 1300, n: "Forester Pass", ly: 40, anc: "end", dx: -5 },
-    { km: 1430, n: "Muir Pass", ly: 12, anc: "start", dx: 5 },
+    { km: 1235, n: "Mt. Whitney", side: true, ly: 12, anc: "middle", lox: -52 },
+    { km: 1300, n: "Forester Pass", ly: 40, anc: "middle", dx: 0 },
+    { km: 1430, n: "Muir Pass", ly: 12, anc: "middle", dx: 0 },
     { km: 1490, n: "Half Dome", side: true, ly: 26, anc: "start", dx: 5 },
     { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0 },
-    { km: 1885, n: "Tahoe Rim Trail", side: true, ly: 12, anc: "middle", dx: 0 }
+    { km: 1885, n: "Tahoe Rim", side: true, ly: 40, anc: "middle", dx: 0 }
   ];
   var TOWNS = [[68,"Mt Laguna"],[175,"Warner Springs"],[290,"Idyllwild"],[435,"Big Bear"],[605,"Wrightwood"],[730,"Agua Dulce"],[915,"Tehachapi"],[1128,"Kennedy Mdws"],[1230,"Lone Pine"],[1290,"Bishop"],[1400,"VVR"],[1450,"Mammoth"],[1510,"Tuolumne"],[1690,"Bridgeport"],[1885,"S Lake Tahoe"],[2020,"Sierra City"],[2130,"Belden"],[2200,"Chester"],[2330,"Burney"],[2510,"Mt Shasta"],[2670,"Etna"],[2760,"Seiad Valley"],[2870,"Ashland"],[2985,"Mazama"],[3230,"Sisters"],[3430,"Timberline"],[3540,"Cascade Locks"],[3620,"Trout Lake"],[3760,"White Pass"],[3870,"Snoqualmie"],[3990,"Stevens Pass"],[4165,"Stehekin"]];
   var LAND = [
@@ -130,6 +128,51 @@
     return best;
   }
 
+  function walkedRangesFrom(track, pts) {
+    if (!track || !track.features) return [];
+    function nearKm(lat, lon) {
+      var best = 0, bd = 1e18;
+      for (var i = 0; i < pts.length; i++) {
+        var d = haversine(lat, lon, pts[i].lat, pts[i].lon);
+        if (d < bd) { bd = d; best = pts[i].km; }
+      }
+      return best;
+    }
+    var ranges = [];
+    track.features.forEach(function (f) {
+      if (!f.geometry || f.geometry.type !== "LineString") return;
+      var c = f.geometry.coordinates, N = c.length;
+      if (!N) return;
+      var lo = 1e18, hi = -1e18;
+      for (var k = 0; k < 12; k++) {
+        var j = Math.round(k * (N - 1) / 11);
+        var km = nearKm(c[j][1], c[j][0]);
+        if (km < lo) lo = km; if (km > hi) hi = km;
+      }
+      ranges.push([lo, hi]);
+    });
+    ranges.sort(function (a, b) { return a[0] - b[0]; });
+    var merged = [];
+    ranges.forEach(function (r) {
+      var last = merged[merged.length - 1];
+      if (last && r[0] <= last[1] + 20) last[1] = Math.max(last[1], r[1]);
+      else merged.push([r[0], r[1]]);
+    });
+    return merged;
+  }
+
+  function activityStats(track) {
+    var dist = 0, dates = {};
+    if (track && track.features) {
+      track.features.forEach(function (f) {
+        var p = f.properties || {};
+        if (typeof p.distance_m === "number") dist += p.distance_m;
+        if (p.start_date) dates[String(p.start_date).slice(0, 10)] = 1;
+      });
+    }
+    return { km: dist / 1000, days: Object.keys(dates).length };
+  }
+
   function fillHero(reg, F) {
     if (!CUR) return;
     var toGo = Math.max(0, TOTAL_KM - CUR.km);
@@ -146,29 +189,13 @@
     setHTML("mMeta", STR.near + near + " \u00B7 " + DARR + " <b>" + distStr(CUR.km) + "</b> \u00B7 " + EARR + " <b>" + elevStr(CUR.m) + "</b>");
   }
 
-  function grabStats() {
-    var ins = document.getElementById("insightsList");
-    if (!ins || !CUR) return false;
-    var m = ins.textContent.match(/(\d+)\s*active days/);
-    if (!m) return false;
-    var days = parseInt(m[1], 10);
-    setText("heroDays", days);
-    setText("heroDay", STR.liveDay + " " + days);
-    if (days > 0) {
-      setText("heroAvg", nfmt(toDist(CUR.km / days), 1));
+  function fillActivity(st) {
+    if (st.days > 0) {
+      setText("heroDays", st.days);
+      setText("heroDay", STR.liveDay + " " + st.days);
+      setText("heroAvg", nfmt(toDist(st.km / st.days), 1));
       setText("heroAvgU", DE ? "km" : "mi");
     }
-    return true;
-  }
-
-  function watchStats() {
-    if (!document.getElementById("heroDays")) return;
-    if (grabStats()) return;
-    var ins = document.getElementById("insightsList");
-    if (!ins) return;
-    var obs = new MutationObserver(function () { if (grabStats()) obs.disconnect(); });
-    obs.observe(ins, { childList: true, subtree: true, characterData: true });
-    setTimeout(function () { if (grabStats()) obs.disconnect(); }, 4000);
   }
 
   function wireExpand() {
@@ -189,7 +216,7 @@
     btn.setAttribute("aria-label", DE ? "Karte vergr\u00f6\u00dfern" : "Enlarge map");
   }
 
-  function render(container, data, latest) {
+  function render(container, data, latest, track) {
     var TOTAL = data.total_km;
     TOTAL_KM = TOTAL;
     var pts = data.points;
@@ -208,8 +235,15 @@
     CUR = cur;
     var reg = REGIONS.find(function (r) { return cur.km >= r.a * F && cur.km < r.b * F; }) || REGIONS[REGIONS.length - 1];
 
+    var walked = walkedRangesFrom(track, pts);
+    if (!walked.length) walked = [[0, cur.km]];
+    function inWalked(km) {
+      for (var i = 0; i < walked.length; i++) { if (km >= walked[i][0] && km <= walked[i][1]) return true; }
+      return false;
+    }
+
     fillHero(reg, F);
-    watchStats();
+    fillActivity(activityStats(track));
 
     if (!container) return;
 
@@ -224,6 +258,9 @@
     var line = "M " + x(S[0][0]).toFixed(1) + " " + y(S[0][1]).toFixed(1);
     S.forEach(function (pt) { line += " L " + x(pt[0]).toFixed(1) + " " + y(pt[1]).toFixed(1); });
     var area = line + " L " + x(TOTAL) + " " + baseY + " L " + x(0) + " " + baseY + " Z";
+
+    var walkedClip = "";
+    walked.forEach(function (r) { walkedClip += '<rect x="' + x(r[0]) + '" y="0" width="' + (x(r[1]) - x(r[0])) + '" height="' + baseY + '"/>'; });
 
     var grid = '<line x1="' + PADL + '" y1="' + baseY + '" x2="' + (W - PADR) + '" y2="' + baseY + '" stroke="#00000010"/>';
     GRID.forEach(function (g) {
@@ -241,7 +278,7 @@
 
     var lY = bY + bH + 18, land = "";
     LAND.forEach(function (m) {
-      var lx = x(m.km * F), done = m.km * F <= cur.km;
+      var lx = x(m.km * F), done = inWalked(m.km * F);
       var col = m.t === "park" ? "#3e9a51" : m.t === "desert" ? "#d19a3a" : "#9aa08f";
       var dash = m.t === "desert" ? 'stroke-dasharray="2 2"' : "";
       land += '<line x1="' + lx + '" y1="' + (bY + bH + 2) + '" x2="' + lx + '" y2="' + (lY - 3) + '" stroke="' + col + '" stroke-width="1.3" ' + dash + ' opacity="' + (done ? 0.8 : 0.4) + '"/>';
@@ -254,7 +291,7 @@
     var townData = [];
     var towns = "";
     TOWNS.forEach(function (t, i) {
-      var km = t[0] * F, tx = x(km), done = km <= cur.km, dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
+      var km = t[0] * F, tx = x(km), done = inWalked(km), dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
       townData.push({ tx: tx, name: t[1], km: t[0] * F });
       towns += '<circle cx="' + tx + '" cy="' + baseY + '" r="1.9" fill="' + dot + '"/>';
       towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
@@ -265,17 +302,26 @@
     PASSES.forEach(function (p) {
       var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(pk.m);
       var col = p.side ? "#cf7440" : "#2c7a3d", dash = p.side ? 'stroke-dasharray="3 2"' : "";
-      passes += '<line x1="' + px + '" y1="' + (p.ly + 3) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/><circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
-      passes += '<text x="' + (px + p.dx) + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
+      var labelX;
+      if (p.lox != null) {
+        var lx2 = px + p.lox;
+        passes += '<line x1="' + lx2 + '" y1="' + (p.ly + 4) + '" x2="' + px + '" y2="' + (p.ly + 4) + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
+        passes += '<line x1="' + px + '" y1="' + (p.ly + 4) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
+        labelX = lx2;
+      } else {
+        passes += '<line x1="' + px + '" y1="' + (p.ly + 3) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/>';
+        labelX = px + (p.dx || 0);
+      }
+      passes += '<circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
+      passes += '<text x="' + labelX + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
     });
 
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="PCT elevation profile">' +
-      '<defs><clipPath id="elDone"><rect x="0" y="0" width="' + markX + '" height="' + baseY + '"/></clipPath>' +
-      '<clipPath id="elRem"><rect x="' + markX + '" y="0" width="' + (W - markX) + '" height="' + baseY + '"/></clipPath>' +
+      '<defs><clipPath id="elWalked">' + walkedClip + '</clipPath>' +
       '<linearGradient id="elG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fae62" stop-opacity=".9"/><stop offset="1" stop-color="#4fae62" stop-opacity=".35"/></linearGradient></defs>' +
       grid +
-      '<path d="' + area + '" clip-path="url(#elRem)" fill="#9db8a4" opacity=".26"/>' +
-      '<path d="' + area + '" clip-path="url(#elDone)" fill="url(#elG)"/>' +
+      '<path d="' + area + '" fill="#9db8a4" opacity=".26"/>' +
+      '<path d="' + area + '" clip-path="url(#elWalked)" fill="url(#elG)"/>' +
       '<path d="' + line + '" fill="none" stroke="#2f7a3e" stroke-width="1.4" opacity=".7"/>' +
       passes + towns + bands + land +
       '<line x1="' + markX + '" y1="' + markY + '" x2="' + markX + '" y2="' + (bY + bH) + '" stroke="#cf7440" stroke-width="1.6" stroke-dasharray="4 3"/>' +
@@ -336,11 +382,10 @@
     var hero = document.getElementById("heroTitle");
     if (!container && !hero) return;
     injectCSS();
-    Promise.all([
-      fetch(BASE + "data/pct_profile.json", { cache: "no-store" }).then(function (r) { return r.json(); }),
-      fetch(BASE + "data/latest.json", { cache: "no-store" }).then(function (r) { return r.json(); }).catch(function () { return null; })
-    ]).then(function (res) {
-      render(container, res[0], res[1]);
+    function J(u) { return fetch(BASE + u, { cache: "no-store" }).then(function (r) { return r.json(); }).catch(function () { return null; }); }
+    Promise.all([J("data/pct_profile.json"), J("data/latest.json"), J("data/track.geojson")]).then(function (res) {
+      if (!res[0]) throw new Error("no profile");
+      render(container, res[0], res[1], res[2]);
     }).catch(function (e) {
       if (container) container.innerHTML = '<div class="el-card">Could not load elevation profile.</div>';
       console.error(e);
