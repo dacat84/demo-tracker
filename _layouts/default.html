@@ -48,7 +48,8 @@
     for(var i=0;i<ns.length;i++){ var v=ns[i].getAttribute('data-'+L); if(v!=null) ns[i].textContent=v; }
     var b=document.getElementById('langToggle');
     if(b){
-      b.innerHTML=(L==='de')?'DE&nbsp;\u00b7&nbsp;<span style="opacity:.4">EN</span>':'<span style="opacity:.4">DE</span>&nbsp;\u00b7&nbsp;EN';
+      b.style.fontSize='15px'; b.style.lineHeight='1'; b.setAttribute('aria-label','Sprache / Language');
+      b.innerHTML=(L==='de')?'\uD83C\uDDE9\uD83C\uDDEA<span style="opacity:.32;margin-left:7px">\uD83C\uDDFA\uD83C\uDDF8</span>':'<span style="opacity:.32;margin-right:7px">\uD83C\uDDE9\uD83C\uDDEA</span>\uD83C\uDDFA\uD83C\uDDF8';
       b.addEventListener('click',function(){ localStorage.setItem('pctLang', L==='de'?'en':'de'); location.reload(); });
     }
   })();
