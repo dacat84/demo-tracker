@@ -49,12 +49,12 @@
     { km: 290, n: "San Jacinto", ly: 12, anc: "middle", dx: 0 },
     { km: 393, n: "San Gorgonio", ly: 40, anc: "middle", dx: 0 },
     { km: 610, n: "Mt. Baden-Powell", side: true, ly: 26, anc: "middle", dx: 0 },
-    { km: 1235, n: "Mt. Whitney", side: true, ly: 50, anc: "middle", lox: -46 },
-    { km: 1300, n: "Forester Pass", ly: 40, anc: "middle", dx: 0 },
-    { km: 1430, n: "Muir Pass", ly: 12, anc: "middle", dx: 0 },
+    { km: 1235, n: "Mt. Whitney", side: true, ly: 50, anc: "middle", lox: -46, el: 4421 },
+    { km: 1300, n: "Forester Pass", ly: 40, anc: "middle", dx: 0, el: 4009 },
+    { km: 1430, n: "Muir Pass", ly: 12, anc: "middle", dx: 0, el: 3637 },
     { km: 1490, n: "Half Dome", side: true, ly: 26, anc: "start", dx: 5 },
     { km: 1620, n: "Leavitt Peak", ly: 68, anc: "middle", dx: 0 },
-    { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0 },
+    { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0, el: 2933 },
     { km: 1885, n: "Tahoe Rim", side: true, ly: 54, anc: "middle", dx: 0 }
   ];
   var TOWNS = [[68,"Mt Laguna"],[124,"Julian"],[175,"Warner Springs"],[290,"Idyllwild"],[435,"Big Bear"],[605,"Wrightwood"],[730,"Agua Dulce"],[832,"Hikertown"],[915,"Tehachapi"],[1050,"Lake Isabella"],[1128,"Kennedy Mdws","Kennedy Meadows"],[1230,"Lone Pine"],[1290,"Bishop"],[1400,"VVR","Vermilion Valley Resort"],[1450,"Mammoth"],[1510,"Tuolumne"],[1690,"Bridgeport"],[1885,"S Lake Tahoe","South Lake Tahoe"],[2020,"Sierra City"],[2130,"Belden"],[2200,"Chester"],[2330,"Burney"],[2510,"Mt Shasta"],[2670,"Etna"],[2760,"Seiad Valley"],[2870,"Ashland"],[2985,"Mazama"],[3230,"Sisters"],[3430,"Timberline"],[3540,"Cascade Locks"],[3620,"Trout Lake"],[3760,"White Pass"],[3870,"Snoqualmie"],[3990,"Stevens Pass"],[4165,"Stehekin"]];
@@ -318,7 +318,7 @@
 
     var passes = "";
     PASSES.forEach(function (p) {
-      var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(pk.m);
+      var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(Math.min(p.el != null ? p.el : pk.m, maxM));
       var col = p.side ? "#cf7440" : "#2c7a3d", dash = p.side ? 'stroke-dasharray="3 2"' : "";
       var labelX;
       if (p.lox != null) {
