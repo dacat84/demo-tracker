@@ -25,7 +25,7 @@
     distWord: "Distanz", altWord: "H\u00f6he", resupply: "Versorgungsort"
   } : {
     liveDay: "Day", inThe: "I'm in the ", rightNow: " right now.",
-    fromCampo: " from Campo", nearestWp: " \u00B7 nearest waypoint ", stillPre: "", toEnd: " still to the Northern Terminus.",
+    fromCampo: " from Campo", nearestWp: " \u00B7 next waypoint ", stillPre: "", toEnd: " still to the Northern Terminus.",
     climb: "<b>P</b>acific <b>C</b>rest <b>T</b>rail elevation profile", nowAt: "Now at ",
     here: "You are here", legPass: "Pass / peak", legSide: "Side trip", legTown: "Resupply town",
     legState: "Solid = tracked \u00B7 faded = not yet", near: "Near ",
@@ -57,7 +57,7 @@
     { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0 },
     { km: 1885, n: "Tahoe Rim", side: true, ly: 54, anc: "middle", dx: 0 }
   ];
-  var TOWNS = [[68,"Mt Laguna"],[124,"Julian"],[175,"Warner Springs"],[290,"Idyllwild"],[435,"Big Bear"],[605,"Wrightwood"],[730,"Agua Dulce"],[832,"Hikertown"],[915,"Tehachapi"],[1050,"Lake Isabella"],[1128,"Kennedy Mdws"],[1230,"Lone Pine"],[1290,"Bishop"],[1400,"VVR"],[1450,"Mammoth"],[1510,"Tuolumne"],[1690,"Bridgeport"],[1885,"S Lake Tahoe"],[2020,"Sierra City"],[2130,"Belden"],[2200,"Chester"],[2330,"Burney"],[2510,"Mt Shasta"],[2670,"Etna"],[2760,"Seiad Valley"],[2870,"Ashland"],[2985,"Mazama"],[3230,"Sisters"],[3430,"Timberline"],[3540,"Cascade Locks"],[3620,"Trout Lake"],[3760,"White Pass"],[3870,"Snoqualmie"],[3990,"Stevens Pass"],[4165,"Stehekin"]];
+  var TOWNS = [[68,"Mt Laguna"],[124,"Julian"],[175,"Warner Springs"],[290,"Idyllwild"],[435,"Big Bear"],[605,"Wrightwood"],[730,"Agua Dulce"],[832,"Hikertown"],[915,"Tehachapi"],[1050,"Lake Isabella"],[1128,"Kennedy Mdws","Kennedy Meadows"],[1230,"Lone Pine"],[1290,"Bishop"],[1400,"VVR","Vermilion Valley Resort"],[1450,"Mammoth"],[1510,"Tuolumne"],[1690,"Bridgeport"],[1885,"S Lake Tahoe","South Lake Tahoe"],[2020,"Sierra City"],[2130,"Belden"],[2200,"Chester"],[2330,"Burney"],[2510,"Mt Shasta"],[2670,"Etna"],[2760,"Seiad Valley"],[2870,"Ashland"],[2985,"Mazama"],[3230,"Sisters"],[3430,"Timberline"],[3540,"Cascade Locks"],[3620,"Trout Lake"],[3760,"White Pass"],[3870,"Snoqualmie"],[3990,"Stevens Pass"],[4165,"Stehekin"]];
   var LAND = [
     { km: 290, n: "San Jacinto", t: "mark" },
     { km: 870, n: "Mojave Desert", t: "desert" },
@@ -131,7 +131,16 @@
     }
     return best;
   }
+  function nextWaypoint(km, F) {
+    var best = "Northern Terminus", bd = 1e18;
+    for (var i = 0; i < WAY.length; i++) {
+      var d = WAY[i][0] * F - km;
+      if (d > 0 && d < bd) { bd = d; best = WAY[i][1]; }
+    }
+    return best;
+  }
 
+  // Project each tracked activity onto the profile -> merged [kmMin,kmMax] ranges.
   function walkedRangesFrom(track, pts) {
     if (!track || !track.features) return [];
     function nearKm(lat, lon) {
@@ -182,8 +191,9 @@
     var toGo = Math.max(0, TOTAL_KM - CUR.km);
     var pct = Math.round((CUR.km / TOTAL_KM) * 100);
     var near = nearestWaypoint(CUR.km, F);
+    var nextWp = nextWaypoint(CUR.km, F);
     setHTML("heroTitle", STR.inThe + "<em>" + regName(reg) + "</em>" + STR.rightNow);
-    setHTML("heroSub", "<b>" + distStr(CUR.km) + "</b>" + STR.fromCampo + STR.nearestWp + "<b>" + near +
+    setHTML("heroSub", "<b>" + distStr(CUR.km) + "</b>" + STR.fromCampo + STR.nearestWp + "<b>" + nextWp +
       "</b> \u00B7 " + STR.stillPre + "<b>" + distStr(toGo) + "</b>" + STR.toEnd);
     setText("heroPct", pct);
     setText("pPct", pct + "%");
@@ -299,7 +309,7 @@
     var towns = "";
     TOWNS.forEach(function (t, i) {
       var km = t[0] * F, tx = x(km), done = inWalked(km), dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
-      townData.push({ tx: tx, name: t[1], km: t[0] * F });
+      townData.push({ tx: tx, name: t[2] || t[1], km: t[0] * F });
       towns += '<circle cx="' + tx + '" cy="' + baseY + '" r="1.9" fill="' + dot + '"/>';
       towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
       towns += '<rect class="el-townhit" data-i="' + i + '" x="' + (tx - 6) + '" y="' + (baseY - 48) + '" width="12" height="54"/>';
