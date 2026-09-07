@@ -139,3 +139,17 @@ a:hover{ text-decoration:underline; }
 #insightsList .pct-progressfill{ background:linear-gradient(90deg,#3e9a51,#5cb56d) !important; }
 #insightsList div[style*="255,255,255,.18"]{ background:#dfe1d6 !important; }
 #insightsList div[style*="70,243,255"]{ background:linear-gradient(180deg,#4fae62,#8fce9c) !important; }
+
+/* ---- Map expand overlay ---- */
+.mapexpand{ position:absolute; left:14px; top:14px; z-index:6; width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.92); color:var(--accent-d); font-size:17px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(20,32,28,.12); }
+.mapexpand:hover{ background:#fff; }
+.hero-map.expanded{ position:fixed; inset:12px; z-index:3000; min-height:0; border-radius:18px; box-shadow:0 30px 90px rgba(20,32,28,.35); }
+body.map-expanded{ overflow:hidden; }
+.mapbackdrop{ display:none; }
+body.map-expanded .mapbackdrop{ display:block; position:fixed; inset:0; background:rgba(20,32,28,.5); z-index:2900; }
+
+/* ---- Language toggle ---- */
+.langtoggle{ font-variant-numeric:tabular-nums; letter-spacing:.02em; cursor:pointer; }
+
+/* ---- Off-screen map so map.js can compute stats on the Stats page ---- */
+.map-compute{ position:absolute !important; left:-10000px !important; top:0 !important; width:860px !important; height:520px !important; min-height:0 !important; border:0 !important; box-shadow:none !important; border-radius:0 !important; }
