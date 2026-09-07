@@ -187,21 +187,23 @@
 
   function fillHero(reg, F) {
     if (!CUR) return;
-    var toGo = Math.max(0, TOTAL_KM - CUR.km);
-    var pct = Math.round((CUR.km / TOTAL_KM) * 100);
+    var scale = NOMINAL / TOTAL_KM;                 // show official 4265 km / 2650 mi, not the simplified length
+    var pos = CUR.km * scale;
+    var toGo = Math.max(0, NOMINAL - pos);
+    var pct = Math.round((pos / NOMINAL) * 100);
     var near = nearestWaypoint(CUR.km, F);
     var nextWp = nextWaypoint(CUR.km, F);
     setHTML("heroTitle", STR.inThe + "<em>" + regName(reg) + "</em>" + STR.rightNow);
-    setHTML("heroSub", "<b>" + distStr(CUR.km) + "</b>" + STR.fromCampo + STR.nearestWp + "<b>" + nextWp +
+    setHTML("heroSub", "<b>" + distStr(pos) + "</b>" + STR.fromCampo + STR.nearestWp + "<b>" + nextWp +
       "</b> \u00B7 " + STR.stillPre + "<b>" + distStr(toGo) + "</b>" + STR.toEnd);
     setText("heroPct", pct);
     setText("pPct", pct + "%");
     setText("pRem", distStr(toGo));
-    setText("pDone", distStr(CUR.km));
-    setText("pTotal", distStr(TOTAL_KM));
+    setText("pDone", distStr(pos));
+    setText("pTotal", distStr(NOMINAL));
     var pf = document.getElementById("pFill"); if (pf) pf.style.width = pct + "%";
     setHTML("mPlace", regName(reg) + ", " + reg.st);
-    setHTML("mMeta", STR.near + near + " \u00B7 " + DARR + " <b>" + distStr(CUR.km) + "</b> \u00B7 " + EARR + " <b>" + elevStr(CUR.m) + "</b>");
+    setHTML("mMeta", STR.near + near + " \u00B7 " + DARR + " <b>" + distStr(pos) + "</b> \u00B7 " + EARR + " <b>" + elevStr(CUR.m) + "</b>");
   }
 
   function fillActivity(st) {
@@ -361,7 +363,7 @@
     var prof = container.querySelector("#elProf");
     var chip = document.createElement("div");
     chip.className = "el-chip";
-    chip.innerHTML = DARR + ' <span class="k">' + distStr(cur.km) + '</span> \u00B7 ' + EARR + ' <span class="k">' + elevStr(cur.m) + '</span>';
+    chip.innerHTML = DARR + ' <span class="k">' + distStr(cur.km * (NOMINAL / TOTAL)) + '</span> \u00B7 ' + EARR + ' <span class="k">' + elevStr(cur.m) + '</span>';
     prof.appendChild(chip);
 
     var pop = document.createElement("div");
@@ -378,7 +380,7 @@
       if (t && t.classList && t.classList.contains("el-townhit")) {
         var d = townData[+t.getAttribute("data-i")]; if (!d) return;
         var r = svgRect(); if (!r) return;
-        pop.innerHTML = d.name + "<small>" + STR.resupply + " \u00B7 " + distStr(d.km) + "</small>";
+        pop.innerHTML = d.name + "<small>" + STR.resupply + " \u00B7 " + distStr(d.km * (NOMINAL / TOTAL)) + "</small>";
         pop.style.left = (d.tx * r.width / W) + "px";
         pop.style.top = ((baseY - 12) * r.height / H) + "px";
         pop.classList.add("show");
