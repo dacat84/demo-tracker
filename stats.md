@@ -2,7 +2,7 @@
 layout: default
 title: "Stats"
 nav: stats
-permalink: /stats/
+permalink: /stats.html
 head_extra: |
   <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
 body_extra: |
