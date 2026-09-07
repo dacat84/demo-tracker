@@ -16,13 +16,13 @@ body_extra: |
     <h1 id="heroTitle">Locating my position&hellip;</h1>
     <p class="sub" id="heroSub">Reading the latest GPS fix from the trail.</p>
     <div class="qstats">
-      <div class="qstat"><div class="n"><span id="heroPct">&mdash;</span><small>%</small></div><div class="l">of the trail done</div></div>
-      <div class="qstat"><div class="n"><span id="heroAvg">&mdash;</span><small>km</small></div><div class="l">average day</div></div>
-      <div class="qstat"><div class="n" id="heroDays">&mdash;</div><div class="l">days out</div></div>
+      <div class="qstat"><div class="n"><span id="heroPct">&mdash;</span><small>%</small></div><div class="l" data-en="of the trail done" data-de="des Trails geschafft">of the trail done</div></div>
+      <div class="qstat"><div class="n"><span id="heroAvg">&mdash;</span><small id="heroAvgU">km</small></div><div class="l" data-en="average day" data-de="Ø pro Tag">average day</div></div>
+      <div class="qstat"><div class="n" id="heroDays">&mdash;</div><div class="l" data-en="days out" data-de="Tage unterwegs">days out</div></div>
     </div>
   </div>
   <div class="hero-map">
-    <span class="mapbadge"><span class="beat" style="width:8px;height:8px"></span> LIVE TRACK</span>
+    <button class="mapexpand" id="mapExpand" type="button" aria-label="Enlarge map">&#x2921;</button>
     <div id="map" class="map"></div>
     <div class="mapcallout">
       <div class="place" id="mPlace">Locating&hellip;</div>
@@ -34,9 +34,11 @@ body_extra: |
 <div id="elevation"></div>
 
 <div class="card progress-card" style="margin-top:12px">
-  <div class="ptop"><span>Campo &rarr; Manning Park</span><span><b id="pPct">&mdash;%</b> &middot; <span id="pRem">&mdash; km</span> to go</span></div>
+  <div class="ptop"><span>Campo &rarr; Northern Terminus</span><span><b id="pPct">&mdash;%</b> &middot; <span id="pRem">&mdash; km</span> <span data-en="to go" data-de="verbleibend">to go</span></span></div>
   <div class="ptrack"><div class="pfill" id="pFill"></div></div>
 </div>
+
+<div class="mapbackdrop" id="mapBackdrop"></div>
 
 <div class="tele-hidden" aria-hidden="true">
   <span id="status"></span>
