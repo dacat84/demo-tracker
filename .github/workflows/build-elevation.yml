@@ -1,0 +1,30 @@
+name: Build elevation profile
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [redesign-home]
+    paths:
+      - scripts/build_elevation.py
+      - .github/workflows/build-elevation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build data/pct_profile.json
+        run: python scripts/build_elevation.py
+      - name: Commit profile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/pct_profile.json
+          git diff --staged --quiet || git commit -m "Build data/pct_profile.json [skip ci]"
+          git push
