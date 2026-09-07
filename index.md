@@ -33,9 +33,9 @@ head_extra: |
       font-size: 12px;
       font-weight: 650;
       letter-spacing: 0.2px;
-      color: rgba(240,255,245,.95);
-      background: rgba(20, 120, 70, 0.22);
-      border: 1px solid rgba(120, 255, 190, 0.22);
+      color: #2c7a3d;
+      background: rgba(62,154,81,.12);
+      border: 1px solid rgba(62,154,81,.24);
       box-shadow: 0 10px 22px rgba(0,0,0,.25);
       user-select: none;
       white-space: nowrap;
@@ -83,6 +83,21 @@ head_extra: |
     .hero {
       margin-bottom: 14px;
     }
+
+    /* --- Light-theme overrides for map.js telemetry (stats/insights) --- */
+    #statsList, #insightsList { color:#26312a; }
+    #statsList *, #insightsList * { color:#26312a !important; }
+    #statsList .label, #insightsList .label,
+    #insightsList .pct-day-meta, #insightsList .pct-day-date,
+    #insightsList .pct-row span, #insightsList .pct-section-title span { color:#6c7365 !important; }
+    #statsList .pct-stat-hero, #statsList .pct-chip,
+    #insightsList .pct-section, #insightsList .pct-stat-hero, #insightsList .pct-chip {
+      background:#faf9f4 !important; border-color:#e8e6da !important;
+    }
+    #insightsList .pct-progressbar { background:#edeee6 !important; border-color:#e0e1d8 !important; }
+    #insightsList .pct-progressfill { background:linear-gradient(90deg,#3e9a51,#5cb56d) !important; }
+    #insightsList div[style*="255,255,255,.18"] { background:#dfe1d6 !important; }
+    #insightsList div[style*="70,243,255"] { background:linear-gradient(180deg,#4fae62,#8fce9c) !important; }
   </style>
 body_extra: |
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
