@@ -34,8 +34,8 @@ permalink: /gear/
   })();
 </script>
 <style>
-  .lp-shell{ max-width:980px; margin:0 auto; padding:14px; background:rgba(255,255,255,0.03); border-radius:16px; }
-  .lp-frame{ background:#f6f3ea; border-radius:14px; padding:12px; overflow:hidden; border:1px solid rgba(0,0,0,0.10); }
+  .lp-shell{ max-width:980px; margin:0 auto; padding:0; background:transparent; border-radius:16px; }
+  .lp-frame{ background:#fff; border-radius:14px; padding:0; overflow:hidden; }
   #bv8lr0 iframe{ width:100% !important; height:72vh !important; max-height:900px !important; border-radius:12px !important; display:block; }
   @media (max-width:520px){ #bv8lr0 iframe{ height:78vh !important; } .lp-shell{ padding:10px; } .lp-frame{ padding:10px; } }
 </style>
