@@ -1,16 +1,43 @@
-/* PCT elevation profile + self-configuring home hero
-   Reads data/pct_profile.json (km + m + lat/lon) and data/latest.json (live GPS).
-   Renders the end-to-end climb (regions, passes, side trips, resupply towns,
-   national parks, live marker) and — when the matching elements exist — fills the
-   home hero (headline, sub, quick stats), the map callout and the progress bar.
-   Resupply-town labels enlarge on hover. Curated annotations are keyed to a
-   nominal 4265 km trail and scaled onto the real measured length; passes snap to
-   the local peak so they sit on summits. avg/day and days-out are read from the
-   stats map.js renders (no map.js changes needed). */
+/* PCT elevation profile + self-configuring home hero (DE/EN, metric/imperial).
+   Data: data/pct_profile.json (km + m + lat/lon) and data/latest.json (live GPS).
+   Language is read from localStorage 'pctLang' (falls back to browser language);
+   the header toggle stores it and reloads. DE -> km/m + "." thousands; EN -> mi/ft
+   + "," thousands. Renders the climb (regions, passes, side trips, resupply towns
+   with hover pop-ups, national parks, live marker), fills the hero, the map callout
+   and the progress bar, and wires the map-expand overlay. avg/day + days-out are
+   read from the stats map.js renders (map.js is untouched). */
 (function () {
   "use strict";
   var BASE = "/pct-tracker/";
   var NOMINAL = 4265;
+
+  var LANG = localStorage.getItem("pctLang");
+  if (LANG !== "de" && LANG !== "en") LANG = ((navigator.language || "en").slice(0, 2) === "de") ? "de" : "en";
+  var DE = LANG === "de";
+  var LOC = DE ? "de-DE" : "en-US";
+  var DARR = "\u2192";   // distance
+  var EARR = "\u25B2";   // elevation
+
+  var STR = DE ? {
+    liveDay: "Tag", inThe: "Ich bin gerade in ", rightNow: ".",
+    fromCampo: " ab Campo", nearestWp: " \u00B7 n\u00e4chster Wegpunkt ", stillPre: "noch ", toEnd: " bis zum Northern Terminus.",
+    climb: "H\u00f6henprofil, Anfang bis Ende", nowAt: "Aktuell ",
+    here: "Standort", legPass: "Pass / Gipfel", legSide: "Abstecher", legTown: "Versorgungsort",
+    legState: "Voll = gelaufen \u00B7 blass = noch vor mir", near: "Nahe ",
+    distWord: "Distanz", altWord: "H\u00f6he", resupply: "Versorgungsort"
+  } : {
+    liveDay: "Day", inThe: "I'm in the ", rightNow: " right now.",
+    fromCampo: " from Campo", nearestWp: " \u00B7 nearest waypoint ", stillPre: "", toEnd: " still to the Northern Terminus.",
+    climb: "The climb, end to end", nowAt: "Now at ",
+    here: "You are here", legPass: "Pass / peak", legSide: "Side trip", legTown: "Resupply town",
+    legState: "Solid = walked \u00B7 faded = ahead", near: "Near ",
+    distWord: "distance", altWord: "elevation", resupply: "Resupply"
+  };
+  var REG_DE = {
+    "Southern California": "S\u00fcdkalifornien", "Southern Sierra": "S\u00fcdliche Sierra",
+    "Northern Sierra": "N\u00f6rdliche Sierra", "NorCal / C. Oregon": "NorCal / Zentral-Oregon",
+    "Central Cascades": "Zentrale Cascades", "North Cascades": "N\u00f6rdliche Cascades"
+  };
 
   var REGIONS = [
     { name: "Southern California", a: 0, b: 1100, c: "#e0a06a", st: "CA" },
@@ -24,7 +51,7 @@
     { km: 290, n: "San Jacinto", ly: 12, anc: "middle", dx: 0 },
     { km: 610, n: "Mt. Baden-Powell", side: true, ly: 26, anc: "middle", dx: 0 },
     { km: 1235, n: "Mt. Whitney", side: true, ly: 12, anc: "end", dx: -5 },
-    { km: 1300, n: "Forester Pass", sub: "4,009 m", ly: 40, anc: "end", dx: -5 },
+    { km: 1300, n: "Forester Pass", ly: 40, anc: "end", dx: -5 },
     { km: 1430, n: "Muir Pass", ly: 12, anc: "start", dx: 5 },
     { km: 1490, n: "Half Dome", side: true, ly: 26, anc: "start", dx: 5 },
     { km: 1700, n: "Sonora Pass", ly: 40, anc: "middle", dx: 0 }
@@ -41,7 +68,7 @@
     { km: 3450, n: "Mt. Hood", t: "mark" },
     { km: 4050, n: "North Cascades NP", t: "park" }
   ];
-  var WAY = TOWNS.concat([[0, "Campo"], [1300, "Forester Pass"], [1700, "Sonora Pass"], [4265, "Manning Park"]]);
+  var WAY = TOWNS.concat([[0, "Campo"], [1300, "Forester Pass"], [1700, "Sonora Pass"], [4265, "Northern Terminus"]]);
 
   function haversine(la1, lo1, la2, lo2) {
     var R = 6371.0088, p1 = la1 * Math.PI / 180, p2 = la2 * Math.PI / 180;
@@ -49,7 +76,14 @@
     var h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
     return 2 * R * Math.asin(Math.sqrt(h));
   }
-  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function nfmt(n, dec) {
+    return n.toLocaleString(LOC, dec != null ? { minimumFractionDigits: dec, maximumFractionDigits: dec } : { maximumFractionDigits: 0 });
+  }
+  function toDist(km) { return DE ? km : km * 0.621371; }
+  function toElev(m) { return DE ? m : m * 3.28084; }
+  function distStr(km, dec) { return nfmt(toDist(km), dec) + (DE ? " km" : " mi"); }
+  function elevStr(m) { return nfmt(toElev(m), 0) + (DE ? " m" : " ft"); }
+  function regName(r) { return DE ? (REG_DE[r.name] || r.name) : r.name; }
   function setHTML(id, html) { var e = document.getElementById(id); if (e) e.innerHTML = html; }
   function setText(id, t) { var e = document.getElementById(id); if (e) e.textContent = t; }
 
@@ -63,11 +97,14 @@
       ".el-head h2{margin:0;font:600 21px/1.1 'Fraunces',Georgia,serif;letter-spacing:-.01em}" +
       ".el-now{font-size:13px;color:#6c7365}.el-now b{color:#1e241c}" +
       ".el-prof{position:relative}.el-prof svg{display:block;width:100%;height:auto;overflow:visible}" +
-      ".el-town{transition:font-size .1s ease,fill .1s ease}" +
-      ".el-town:hover{font-size:11.5px;font-weight:700;fill:#1e241c}" +
+      ".el-town{pointer-events:none}.el-townhit{fill:transparent;cursor:pointer}" +
       ".el-chip{position:absolute;transform:translate(-50%,-100%);background:#1e241c;color:#fff;border-radius:10px;padding:7px 11px;font:12px/1.35 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.22);pointer-events:none}" +
       ".el-chip b{font-weight:700}.el-chip .k{color:#f0b48a}" +
       ".el-chip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1e241c}" +
+      ".el-townpop{position:absolute;transform:translate(-50%,-100%);background:#1e241c;color:#fff;border-radius:9px;padding:6px 11px;font:600 12.5px/1.2 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 10px 26px rgba(0,0,0,.28);pointer-events:none;opacity:0;transition:opacity .12s ease;z-index:4}" +
+      ".el-townpop small{display:block;font-weight:500;font-size:10.5px;color:#9fe0ae;margin-top:1px}" +
+      ".el-townpop.show{opacity:1}" +
+      ".el-townpop::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1e241c}" +
       ".el-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font:11.5px Inter,system-ui,sans-serif;color:#6c7365}" +
       ".el-legend span{display:inline-flex;align-items:center;gap:6px}";
     document.head.appendChild(s);
@@ -97,15 +134,15 @@
     var toGo = Math.max(0, TOTAL_KM - CUR.km);
     var pct = Math.round((CUR.km / TOTAL_KM) * 100);
     var near = nearestWaypoint(CUR.km, F);
-    setHTML("heroTitle", "I'm in the <em>" + reg.name + "</em> right now.");
-    setHTML("heroSub", "<b>" + fmt(CUR.km) + " km</b> from Campo &middot; nearest waypoint <b>" + near +
-      "</b> &middot; <b>" + fmt(toGo) + " km</b> still to Canada.");
+    setHTML("heroTitle", STR.inThe + "<em>" + regName(reg) + "</em>" + STR.rightNow);
+    setHTML("heroSub", "<b>" + distStr(CUR.km) + "</b>" + STR.fromCampo + STR.nearestWp + "<b>" + near +
+      "</b> \u00B7 " + STR.stillPre + "<b>" + distStr(toGo) + "</b>" + STR.toEnd);
     setText("heroPct", pct);
     setText("pPct", pct + "%");
-    setText("pRem", fmt(toGo) + " km");
+    setText("pRem", distStr(toGo));
     var pf = document.getElementById("pFill"); if (pf) pf.style.width = pct + "%";
-    setHTML("mPlace", reg.name + ", " + reg.st);
-    setHTML("mMeta", "Near " + near + " &middot; <b>" + fmt(CUR.km) + " km</b> &middot; " + fmt(CUR.m) + " m");
+    setHTML("mPlace", regName(reg) + ", " + reg.st);
+    setHTML("mMeta", STR.near + near + " \u00B7 " + DARR + " <b>" + distStr(CUR.km) + "</b> \u00B7 " + EARR + " <b>" + elevStr(CUR.m) + "</b>");
   }
 
   function grabStats() {
@@ -115,8 +152,11 @@
     if (!m) return false;
     var days = parseInt(m[1], 10);
     setText("heroDays", days);
-    setText("heroDay", "Day " + days);
-    if (days > 0) setText("heroAvg", (CUR.km / days).toFixed(1));
+    setText("heroDay", STR.liveDay + " " + days);
+    if (days > 0) {
+      setText("heroAvg", nfmt(toDist(CUR.km / days), 1));
+      setText("heroAvgU", DE ? "km" : "mi");
+    }
     return true;
   }
 
@@ -128,6 +168,24 @@
     var obs = new MutationObserver(function () { if (grabStats()) obs.disconnect(); });
     obs.observe(ins, { childList: true, subtree: true, characterData: true });
     setTimeout(function () { if (grabStats()) obs.disconnect(); }, 4000);
+  }
+
+  function wireExpand() {
+    var he = document.querySelector(".hero-map");
+    var btn = document.getElementById("mapExpand");
+    var back = document.getElementById("mapBackdrop");
+    if (!he || !btn) return;
+    function set(exp) {
+      he.classList.toggle("expanded", exp);
+      document.body.classList.toggle("map-expanded", exp);
+      btn.innerHTML = exp ? "\u2715" : "\u2921";
+      btn.setAttribute("aria-label", exp ? (DE ? "Karte schlie\u00dfen" : "Close map") : (DE ? "Karte vergr\u00f6\u00dfern" : "Enlarge map"));
+      setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 70);
+    }
+    btn.addEventListener("click", function () { set(!he.classList.contains("expanded")); });
+    if (back) back.addEventListener("click", function () { set(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && he.classList.contains("expanded")) set(false); });
+    btn.setAttribute("aria-label", DE ? "Karte vergr\u00f6\u00dfern" : "Enlarge map");
   }
 
   function render(container, data, latest) {
@@ -154,27 +212,30 @@
 
     if (!container) return;
 
-    var W = 1000, H = 310, PADL = 42, PADR = 10, PADT = 56, baseY = 200, maxM = 3900;
+    var W = 1000, H = 320, PADL = 46, PADR = 10, PADT = 56, baseY = 200, maxM = 4200;
     function x(km) { return PADL + (km / TOTAL) * (W - PADL - PADR); }
     function y(m) { return PADT + (1 - m / maxM) * (baseY - PADT); }
     var markX = x(cur.km), markY = y(cur.m);
+
+    var GRID = DE ? [[1000, "1k"], [2000, "2k"], [3000, "3k"], [4000, "4k"]]
+                  : [[914, "3k"], [1829, "6k"], [2743, "9k"], [3658, "12k"]];
 
     var line = "M " + x(S[0][0]).toFixed(1) + " " + y(S[0][1]).toFixed(1);
     S.forEach(function (pt) { line += " L " + x(pt[0]).toFixed(1) + " " + y(pt[1]).toFixed(1); });
     var area = line + " L " + x(TOTAL) + " " + baseY + " L " + x(0) + " " + baseY + " Z";
 
-    var grid = "";
-    [0, 1500, 3000].forEach(function (m) {
-      var gy = y(m);
+    var grid = '<line x1="' + PADL + '" y1="' + baseY + '" x2="' + (W - PADR) + '" y2="' + baseY + '" stroke="#00000010"/>';
+    GRID.forEach(function (g) {
+      var gy = y(g[0]);
       grid += '<line x1="' + PADL + '" y1="' + gy + '" x2="' + (W - PADR) + '" y2="' + gy + '" stroke="#00000010"/>' +
-              '<text x="' + (PADL - 6) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="10" fill="#9aa08f" font-family="Inter">' + (m === 0 ? "0" : m / 1000 + "k") + '</text>';
+              '<text x="' + (PADL - 6) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="10" fill="#9aa08f" font-family="Inter">' + g[1] + '</text>';
     });
 
     var bY = baseY + 8, bH = 22, bands = "";
     REGIONS.forEach(function (r) {
       var rx = x(r.a * F), rw = x(r.b * F) - x(r.a * F), ahead = r.a * F >= cur.km;
       bands += '<rect x="' + (rx + 1) + '" y="' + bY + '" width="' + (rw - 2) + '" height="' + bH + '" rx="5" fill="' + r.c + '" opacity="' + (ahead ? 0.34 : 0.9) + '"/>';
-      if (rw > 70) bands += '<text x="' + (rx + rw / 2) + '" y="' + (bY + bH / 2 + 3.5) + '" text-anchor="middle" font-size="10.5" font-family="Inter" font-weight="600" fill="#2c3327" opacity="' + (ahead ? 0.5 : 0.92) + '">' + r.name + '</text>';
+      if (rw > 74) bands += '<text x="' + (rx + rw / 2) + '" y="' + (bY + bH / 2 + 3.5) + '" text-anchor="middle" font-size="10" font-family="Inter" font-weight="600" fill="#2c3327" opacity="' + (ahead ? 0.5 : 0.92) + '">' + regName(r) + '</text>';
     });
 
     var lY = bY + bH + 18, land = "";
@@ -189,23 +250,25 @@
       land += '<text x="' + (lx + 4) + '" y="' + (lY + 5) + '" transform="rotate(26 ' + lx + ' ' + lY + ')" font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
     });
 
+    var townData = [];
     var towns = "";
-    TOWNS.forEach(function (t) {
+    TOWNS.forEach(function (t, i) {
       var km = t[0] * F, tx = x(km), done = km <= cur.km, dot = done ? "#2c7a3d" : "#9aa08f", txt = done ? "#20301c" : "#7f8472";
+      townData.push({ tx: tx, name: t[1], km: t[0] * F });
       towns += '<circle cx="' + tx + '" cy="' + baseY + '" r="1.9" fill="' + dot + '"/>';
       towns += '<text class="el-town" x="' + (tx + 3) + '" y="' + (baseY - 5) + '" transform="rotate(-90 ' + (tx + 3) + ' ' + (baseY - 5) + ')" text-anchor="start" font-size="7.6" font-family="Inter" font-weight="500" paint-order="stroke" stroke="#ffffff" stroke-width="2.1" stroke-linejoin="round" fill="' + txt + '">' + t[1] + '</text>';
+      towns += '<rect class="el-townhit" data-i="' + i + '" x="' + (tx - 6) + '" y="' + (baseY - 48) + '" width="12" height="54"/>';
     });
 
     var passes = "";
     PASSES.forEach(function (p) {
       var pk = localMax(S, p.km * F, 45), px = x(pk.km), py = y(pk.m);
       var col = p.side ? "#cf7440" : "#2c7a3d", dash = p.side ? 'stroke-dasharray="3 2"' : "";
-      passes += '<line x1="' + px + '" y1="' + (p.ly + (p.sub ? 13 : 3)) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/><circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
-      passes += '<text x="' + (px + p.dx) + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "▲ " : "") + p.n + '</text>';
-      if (p.sub) passes += '<text x="' + (px + p.dx) + '" y="' + (p.ly + 10) + '" text-anchor="' + p.anc + '" font-size="8" font-family="Inter" fill="' + col + '" opacity=".72">' + p.sub + '</text>';
+      passes += '<line x1="' + px + '" y1="' + (p.ly + 3) + '" x2="' + px + '" y2="' + py + '" stroke="' + col + '" stroke-width="1" ' + dash + ' opacity=".55"/><circle cx="' + px + '" cy="' + py + '" r="2.6" fill="none" stroke="' + col + '" stroke-width="1.4"/>';
+      passes += '<text x="' + (px + p.dx) + '" y="' + p.ly + '" text-anchor="' + p.anc + '" font-size="9.5" font-weight="600" font-family="Inter" fill="' + col + '">' + (p.side ? "\u25B2 " : "") + p.n + '</text>';
     });
 
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="PCT elevation profile with current position">' +
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="PCT elevation profile">' +
       '<defs><clipPath id="elDone"><rect x="0" y="0" width="' + markX + '" height="' + baseY + '"/></clipPath>' +
       '<clipPath id="elRem"><rect x="' + markX + '" y="0" width="' + (W - markX) + '" height="' + baseY + '"/></clipPath>' +
       '<linearGradient id="elG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fae62" stop-opacity=".9"/><stop offset="1" stop-color="#4fae62" stop-opacity=".35"/></linearGradient></defs>' +
@@ -220,34 +283,54 @@
       '</svg>';
 
     container.innerHTML =
-      '<div class="el-card"><div class="el-head"><h2>The climb, end to end</h2>' +
-      '<div class="el-now">Now at <b>' + fmt(cur.m) + ' m</b> \u00B7 ' + reg.name + '</div></div>' +
+      '<div class="el-card"><div class="el-head"><h2>' + STR.climb + '</h2>' +
+      '<div class="el-now">' + STR.nowAt + '<b>' + elevStr(cur.m) + '</b> \u00B7 ' + regName(reg) + '</div></div>' +
       '<div class="el-prof" id="elProf">' + svg + '</div>' +
       '<div class="el-legend">' +
-      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#cf7440"/></svg> You are here</span>' +
-      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#2c7a3d" stroke-width="1.6"/></svg> Pass / peak</span>' +
-      '<span><svg width="12" height="12"><path d="M6 1 L11 11 L1 11 Z" fill="#cf7440"/></svg> Side trip</span>' +
-      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="3" fill="#3e9a51"/></svg> Resupply town</span>' +
-      '<span>Solid = walked \u00B7 faded = ahead</span>' +
+      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#cf7440"/></svg> ' + STR.here + '</span>' +
+      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#2c7a3d" stroke-width="1.6"/></svg> ' + STR.legPass + '</span>' +
+      '<span><svg width="12" height="12"><path d="M6 1 L11 11 L1 11 Z" fill="#cf7440"/></svg> ' + STR.legSide + '</span>' +
+      '<span><svg width="12" height="12"><circle cx="6" cy="6" r="3" fill="#3e9a51"/></svg> ' + STR.legTown + '</span>' +
+      '<span>' + DARR + " " + STR.distWord + " \u00B7 " + EARR + " " + STR.altWord + '</span>' +
+      '<span>' + STR.legState + '</span>' +
       '</div></div>';
 
     var prof = container.querySelector("#elProf");
     var chip = document.createElement("div");
     chip.className = "el-chip";
-    chip.innerHTML = '<b>You are here</b><br><span class="k">' + fmt(cur.km) + ' km \u00B7 ' + fmt(cur.m) + ' m</span>';
+    chip.innerHTML = '<b>' + STR.here + '</b><br>' + DARR + ' <span class="k">' + distStr(cur.km) + '</span> \u00B7 ' + EARR + ' <span class="k">' + elevStr(cur.m) + '</span>';
     prof.appendChild(chip);
+
+    var pop = document.createElement("div");
+    pop.className = "el-townpop";
+    prof.appendChild(pop);
+    function svgRect() { var s = prof.querySelector("svg"); return s ? s.getBoundingClientRect() : null; }
     function place() {
-      var svgEl = prof.querySelector("svg");
-      if (!svgEl) return;
-      var r = svgEl.getBoundingClientRect();
+      var r = svgRect(); if (!r) return;
       chip.style.left = (markX * r.width / W) + "px";
       chip.style.top = (markY * r.height / H - 12) + "px";
     }
+    prof.addEventListener("mouseover", function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains("el-townhit")) {
+        var d = townData[+t.getAttribute("data-i")]; if (!d) return;
+        var r = svgRect(); if (!r) return;
+        pop.innerHTML = d.name + "<small>" + STR.resupply + " \u00B7 " + distStr(d.km) + "</small>";
+        pop.style.left = (d.tx * r.width / W) + "px";
+        pop.style.top = ((baseY - 12) * r.height / H) + "px";
+        pop.classList.add("show");
+      }
+    });
+    prof.addEventListener("mouseout", function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains("el-townhit")) pop.classList.remove("show");
+    });
     place();
     window.addEventListener("resize", place);
   }
 
   function init() {
+    wireExpand();
     var container = document.getElementById("elevation");
     var hero = document.getElementById("heroTitle");
     if (!container && !hero) return;
