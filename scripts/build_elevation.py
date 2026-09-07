@@ -7,11 +7,11 @@ collection (lon/lat only, no elevation). This script walks the trail, samples
 elevations from a public DEM (OpenTopoData / SRTM 30 m) at evenly spaced points,
 and writes data/pct_profile.json:
 
-    { "total_km": 4265.0, "points": [ {"km": 0.0, "m": 883}, ... ] }
+    { "total_km": 4265.0, "points": [ {"km": 0.0, "m": 883, "lat": 32.6, "lon": -116.5}, ... ] }
 
-The site loads that JSON directly, so the profile is static and fast. Run once
-locally, or wire it into a manual GitHub Action. Curated passes / towns / parks
-live in the frontend, keyed by km — they do not come from here.
+The site loads that JSON directly, so the profile is static and fast. lat/lon per
+point let the frontend map the live GPS position to a km on the trail. Curated
+passes / towns / parks live in the frontend, keyed by km — they do not come here.
 """
 import json, time, math, urllib.request, pathlib
 
@@ -98,9 +98,11 @@ def main():
     print(f"Fetching {len(sampled)} elevations from OpenTopoData ...")
     elevs = fetch_elevations(sampled)
 
-    points = [{"km": round(km, 2), "m": None if e is None else round(e)}
+    points = [{"km": round(km, 2), "m": None if e is None else round(e),
+               "lat": round(lat, 5), "lon": round(lon, 5)}
               for ((lon, lat), km), e in zip(sampled, elevs)]
 
+    # forward-fill any nulls the DEM couldn't resolve
     last = 0
     for p in points:
         if p["m"] is None:
