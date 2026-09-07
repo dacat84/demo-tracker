@@ -140,7 +140,6 @@
     return best;
   }
 
-  // Project each tracked activity onto the profile -> merged [kmMin,kmMax] ranges.
   function walkedRangesFrom(track, pts) {
     if (!track || !track.features) return [];
     function nearKm(lat, lon) {
@@ -302,7 +301,7 @@
         ? '<circle cx="' + lx + '" cy="' + lY + '" r="2.6" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '"/>'
         : '<rect x="' + (lx - 2) + '" y="' + (lY - 2) + '" width="4" height="4" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '" transform="rotate(45 ' + lx + ' ' + lY + ')"/>';
       var edge = lx > W - 95;
-      land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (lY + 5) + '" text-anchor="' + (edge ? 'middle' : 'start') + '" transform="rotate(26 ' + lx + ' ' + lY + ')" font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
+      land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (edge ? (lY + 13) : (lY + 5)) + '" text-anchor="' + (edge ? 'middle' : 'start') + '"' + (edge ? '' : ' transform="rotate(26 ' + lx + ' ' + lY + ')"') + ' font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
     });
 
     var townData = [];
