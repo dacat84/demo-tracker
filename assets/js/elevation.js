@@ -310,13 +310,14 @@
       LAND.forEach(function (m) {
         var lx = x(m.km * F), done = inWalked(m.km * F);
         var col = m.t === "park" ? "#3e9a51" : m.t === "desert" ? "#d19a3a" : "#9aa08f";
+        var tcol = m.t === "park" ? "#2f7a3e" : m.t === "desert" ? "#b5842e" : "#6b7280";
         var dash = m.t === "desert" ? 'stroke-dasharray="2 2"' : "";
         land += '<line x1="' + lx + '" y1="' + (bY + bH + 2) + '" x2="' + lx + '" y2="' + (lY - 3) + '" stroke="' + col + '" stroke-width="1.3" ' + dash + ' opacity="' + (done ? 0.8 : 0.4) + '"/>';
         land += m.t === "park"
           ? '<circle cx="' + lx + '" cy="' + lY + '" r="2.6" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '"/>'
           : '<rect x="' + (lx - 2) + '" y="' + (lY - 2) + '" width="4" height="4" fill="' + col + '" opacity="' + (done ? 1 : 0.45) + '" transform="rotate(45 ' + lx + ' ' + lY + ')"/>';
         var edge = lx > W - 95;
-        land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (edge ? (lY + 13) : (lY + 5)) + '" text-anchor="' + (edge ? 'middle' : 'start') + '"' + (edge ? '' : ' transform="rotate(26 ' + lx + ' ' + lY + ')"') + ' font-size="9.5" font-family="Inter" fill="#78806c" opacity="' + (done ? 0.95 : 0.5) + '">' + m.n + '</text>';
+        land += '<text x="' + (edge ? lx : (lx + 4)) + '" y="' + (edge ? (lY + 13) : (lY + 5)) + '" text-anchor="' + (edge ? 'middle' : 'start') + '"' + (edge ? '' : ' transform="rotate(26 ' + lx + ' ' + lY + ')"') + ' font-size="10.5" font-weight="600" font-family="Inter" fill="' + tcol + '" opacity="' + (done ? 1 : 0.72) + '">' + m.n + '</text>';
       });
 
       var townData = [];
